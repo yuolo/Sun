@@ -7,3 +7,9 @@ test-results/
 playwright-report/
 .font-cache/
 dist-single/
+__pycache__/
+*.pyc
+.pytest_cache/
+shots/
+build/
+*.pyxapp

@@ -1,0 +1,23 @@
+[project]
+name = "richu"
+version = "2.0.0"
+description = "日出 · Восход — пиксельное приключение о горе Тайшань и китайских иероглифах"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["pyxel>=2.9"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pypinyin>=0.55", "fonttools>=4.50", "brotli>=1.1", "pillow>=10"]
+
+[project.scripts]
+richu = "richu.game:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests_py"]
+addopts = "-q"
+
+[tool.setuptools.packages.find]
+include = ["richu*"]
+
+[tool.setuptools.package-data]
+richu = ["assets/**/*"]
