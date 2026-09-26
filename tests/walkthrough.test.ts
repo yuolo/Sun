@@ -236,3 +236,58 @@ describe('dead ends are impossible', () => {
     expect(game.state.finished).toBe(true);
   });
 });
+
+describe('a careful player who makes no mistakes', () => {
+  const opened = (game: HeadlessGame, ids: string[]) =>
+    ids.filter((id) => pageStatus(game.state, PAGES.find((p) => p.id === id)!) === 'locked');
+
+  it('meets every glyph of a chapter before leaving it', async () => {
+    const game = new HeadlessGame();
+    await game.start();
+    await game.talk('boatman');
+    await game.exit('village');
+    for (const a of ['woman', 'oldman', 'lanternman']) await game.talk(a);
+    await game.click('bucket');
+    await game.click('woodpile');
+    await game.use('wood', 'oldman');
+    await game.click('campfire');
+    await game.use('torch', 'lanternman');
+    await game.exit('pier');
+    await game.click('river');
+    await game.exit('village');
+    await game.use('water', 'woman');
+    await game.exit('arch');
+    game.answer('上山');
+    await game.exit('stairs');
+    expect(opened(game, ['elements', 'people', 'way'])).toEqual([]);
+
+    await game.exit('teahouse');
+    await game.talk('owner');
+    for (const [who, cups] of [
+      ['bigman', [tea('big')]],
+      ['lady', [tea('small'), tea('small')]],
+      ['monk', [water(), water(), water()]],
+    ] as const) {
+      await tray(game, [...cups]);
+      await game.use('tray', who);
+    }
+    await game.exit('gate');
+    game.answer('有');
+    await game.exit('gate');
+    expect(game.state.scene).toBe('3a');
+    expect(opened(game, ['count1', 'count2', 'teahouse', 'trade'])).toEqual([]);
+
+    await game.click('bells');
+    await game.exit('stairs');
+    expect(opened(game, ['sky', 'gates'])).toEqual([]);
+
+    await game.exit('up');
+    game.answer('看');
+    await game.talk('gatekeeper');
+    await game.exit('through');
+    expect(opened(game, ['compass'])).toEqual([]);
+    await game.exit('west');
+    await game.talk('poet');
+    expect(opened(game, ['dawn'])).toEqual([]);
+  });
+});

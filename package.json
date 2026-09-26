@@ -11,10 +11,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "fonts": "python3 scripts/subset-fonts.py"
+    "fonts": "python3 scripts/subset-fonts.py",
+    "e2e": "node scripts/e2e.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",
+    "playwright-core": "^1.63.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.1",
     "vitest": "^5.0.2"

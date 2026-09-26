@@ -192,7 +192,16 @@ const village: SceneDef = {
       y: 822,
       facing: 'right',
       standAt: 700,
-      onTalk: (c) => cycle(c, 'kid1_n', 'kid', ['你好！', '山！山！', '你好！你好！']),
+      onTalk: async (c) => {
+        const n = Number(c.flag('kid1_n') ?? 0);
+        c.set('kid1_n', n + 1);
+        if (n % 3 === 1) {
+          await c.talk([
+            ['kid', '我要火！'],
+            ['woman', '不！不要火！'],
+          ]);
+        } else await c.say('kid', n % 3 === 0 ? '你好！' : '山！山！');
+      },
     },
   ],
   hotspots: [
@@ -354,7 +363,7 @@ const arch: SceneDef = {
     await c.talk([
       ['pilgrim', '你好！'],
       ['guard', '你好！下山吗？'],
-      ['pilgrim', '下山。'],
+      ['pilgrim', '下山。我不上山。'],
     ]);
     await c.move('pilgrim', -120, 818);
     c.set('arch_scene');

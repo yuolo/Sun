@@ -2406,3 +2406,9 @@ body.using-item .cursor-item {
 body:not([data-time='night']):not([data-time='predawn']):not([data-time='dusk']) .actor .glow {
   display: none;
 }
+
+@media (orientation: portrait) {
+  .title-shade {
+    background: linear-gradient(180deg, rgba(22, 14, 26, 0.55), rgba(22, 14, 26, 0.75));
+  }
+}

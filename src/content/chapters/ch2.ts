@@ -107,6 +107,10 @@ const market: SceneDef = {
     c.set('ch2');
     await c.chapter(2);
     await countHops(c);
+    await c.talk([
+      ['porter', '我要茶。'],
+      ['porter', '我没有钱。'],
+    ]);
   },
 };
 
