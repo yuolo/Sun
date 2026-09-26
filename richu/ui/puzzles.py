@@ -35,6 +35,16 @@ async def open_puzzle(view: Any, kind: str, **params: Any) -> Any:
     return await APP.show(cls(**params))
 
 
+def show_lines(lines: list[str]) -> None:
+    """The player reads what a puzzle window shows: glyphs become met, lines go to the log."""
+    from ..core import journal
+
+    st = SESSION.state
+    for ln in lines:
+        journal.see(st, ln)
+        journal.record_line(st, 'puzzle', ln, st.scene)
+
+
 def dim() -> None:
     pyxel.dither(0.6)
     pyxel.rect(0, 0, W, H, P.INK)
@@ -143,6 +153,7 @@ class Choose(Screen):
         self.prompt = prompt
         self.options = options
         self.cancel_ok = cancel
+        show_lines([o['zh'] for o in options if o.get('zh')])
         n = len(options)
         self.cw = min(56, (W - 40) // max(1, n))
         self.x0 = W // 2 - n * self.cw // 2
@@ -333,18 +344,14 @@ class FaceGame(Screen):
 
     def __init__(self, parts: list[str], lines: list[str] | None = None) -> None:
         super().__init__()
-        from ..core import journal
-
         self.parts = [p for p in parts if p in FACE_PARTS]
         self.lines = lines or [f'这是{p}。' for p in self.parts]
         s = SESSION.state
-        for ln in self.lines:
-            journal.see(s, ln)
+        show_lines(self.lines)
         order = sorted(self.parts, key=lambda p: (ord(p[0]) * 31) % 17)
         self.questions = [f'{p}在哪儿？' for p in order]
         self.answers = order
-        for q in self.questions:
-            journal.see(s, q)
+        show_lines(self.questions)
         self.phase = 'learn'
         self.step = 0
         self.age = 0
@@ -464,16 +471,13 @@ class CargoList(Screen):
 
     def __init__(self, rows: list[dict[str, Any]], lines: list[str] | None = None, title: str = '单子') -> None:
         super().__init__()
-        from ..core import journal
-
         self.rows = rows
         self.title = title
         self.row = 0
         self.ok: list[bool] = [False] * len(rows)
         self.flash = 0
         self.done = 0
-        for ln in (lines or [r['zh'] for r in rows]):
-            journal.see(SESSION.state, ln)
+        show_lines(lines or [r['zh'] for r in rows])
 
     def option_rect(self, i: int) -> tuple[int, int, int, int]:
         return 146 + i * 52, 70, 48, 52
@@ -563,8 +567,6 @@ class TeaTray(Screen):
 
     def __init__(self, orders: list[dict[str, Any]], lines: list[str] | None = None) -> None:
         super().__init__()
-        from ..core import journal
-
         self.orders = orders
         self.i = 0
         self.tray: list[str] = []
@@ -573,8 +575,7 @@ class TeaTray(Screen):
         self.shelf = list(TRAY_GOODS)
         self.b_serve = ui.Button(W - 86, 130, 62, 16, '送', style='seal')
         self.b_clear = ui.Button(W - 150, 130, 58, 16, 'Убрать', small=True)
-        for ln in (lines or [o['zh'] for o in orders]):
-            journal.see(SESSION.state, ln)
+        show_lines(lines or [o['zh'] for o in orders])
 
     def shelf_rect(self, k: int) -> tuple[int, int, int, int]:
         return 24 + k * 38, 92, 34, 32
@@ -654,8 +655,6 @@ class Bells(Screen):
 
     def __init__(self, bells: str, chant: str, lines: list[str] | None = None) -> None:
         super().__init__()
-        from ..core import journal
-
         self.bells = list(bells)
         self.chant = chant
         self.progress = 0
@@ -663,8 +662,7 @@ class Bells(Screen):
         self.flash = 0
         self.done = 0
         self.lines = lines or []
-        for ln in self.lines:
-            journal.see(SESSION.state, ln)
+        show_lines(self.lines)
 
     def bell_x(self, i: int) -> int:
         n = len(self.bells)
@@ -723,3 +721,250 @@ class Bells(Screen):
             text.center(W // 2, 134, 'Звон рассыпался. Начните сначала.', P.VERMILION, small=True)
         else:
             text.center(W // 2, 134, 'Звоните в колокола в том порядке, что в надписи.', P.STONE, small=True)
+
+
+# ---------------------------------------------------------------- lost and found
+
+COLOR_OF = {'红': P.VERMILION, '黑': P.INK, '蓝': P.DARK_BLUE, '绿': P.JADE, '白': P.WHITE, '黄': P.YELLOW}
+
+
+def draw_thing(traits: str, x: int, y: int) -> None:
+    """A little drawing of a lost thing from its traits (颜色 + 大小/长短 + 伞/帽/裙/本/瓶)."""
+    col = next((c for g, c in COLOR_OF.items() if g in traits), P.STONE)
+    big = '大' in traits or '长' in traits
+    if '伞' in traits:
+        w = 22 if big else 14
+        pyxel.tri(x + 12 - w // 2, y + 12, x + 12 + w // 2, y + 12, x + 12, y + 2, col)
+        pyxel.line(x + 12, y + 12, x + 12, y + 22, P.WOOD)
+        pyxel.line(x + 12, y + 22, x + 10, y + 22, P.WOOD)
+    elif '帽' in traits:
+        pyxel.elli(x + 4, y + 10, 16, 8, col)
+        pyxel.rect(x + 1, y + 16, 22, 3, col)
+    elif '裙' in traits:
+        h = 18 if big else 10
+        pyxel.rect(x + 8, y + 4, 8, 3, col)
+        pyxel.tri(x + 8, y + 7, x + 16, y + 7, x + 3, y + 7 + h, col)
+        pyxel.tri(x + 16, y + 7, x + 21, y + 7 + h, x + 3, y + 7 + h, col)
+    elif '本' in traits:
+        pyxel.rect(x + 5, y + 4, 14, 18, col)
+        pyxel.rectb(x + 5, y + 4, 14, 18, P.INK)
+        pyxel.line(x + 8, y + 4, x + 8, y + 21, P.PAPER)
+    elif '瓶' in traits:
+        pyxel.rect(x + 10, y + 2, 4, 4, col)
+        pyxel.rect(x + 8, y + 6, 8, 16, col)
+        pyxel.rectb(x + 8, y + 6, 8, 16, P.INK)
+    if col == P.INK:
+        return
+    if col == P.WHITE:
+        pyxel.rectb(x + 2, y + 2, 20, 20, P.STONE)
+
+
+@puzzle('lost')
+class LostAndFound(Screen):
+    """Give each owner the thing that fits the description.
+
+    owners: [{'id': 'girl', 'zh': '我的伞是红色的，很小。', 'traits': '红小伞'}, …]
+    things: [{'id': 'u1', 'traits': '红小伞'}, …]
+    """
+
+    def __init__(self, owners: list[dict[str, str]], things: list[dict[str, str]], lines: list[str] | None = None) -> None:
+        super().__init__()
+        self.owners = owners
+        self.things = things
+        self.pairs: dict[str, str] = {}
+        self.sel: str | None = None
+        self.flash = 0
+        self.done = 0
+        show_lines(lines or [o['zh'] for o in owners])
+
+    def thing_rect(self, k: int) -> tuple[int, int, int, int]:
+        return 224 + (k % 3) * 27, 30 + (k // 3) * 30, 26, 28
+
+    def slot_rect(self, i: int) -> tuple[int, int, int, int]:
+        return 192, 26 + i * 30, 26, 28
+
+    def update(self) -> None:
+        from ..core.puzzles import Thing, match_all
+
+        self.flash = max(0, self.flash - 1)
+        if self.done:
+            self.done += 1
+            if self.done > 40 or (self.done > 10 and INPUT.click_anywhere()):
+                self.close(True)
+            return
+        if INPUT.cancel():
+            self.close(False)
+            return
+        for k, t in enumerate(self.things):
+            if INPUT.click(*self.thing_rect(k)):
+                self.sel = t['id']
+                audio.sfx('tap')
+                return
+        for i, o in enumerate(self.owners):
+            if INPUT.click(*self.slot_rect(i)):
+                if self.sel:
+                    for key, v in list(self.pairs.items()):
+                        if v == self.sel:
+                            del self.pairs[key]
+                    self.pairs[o['id']] = self.sel
+                    self.sel = None
+                else:
+                    self.pairs.pop(o['id'], None)
+                if len(self.pairs) == len(self.owners):
+                    things = [Thing(t['id'], frozenset(t['traits'])) for t in self.things]
+                    descr = {o['id']: frozenset(o['traits']) for o in self.owners}
+                    if match_all(descr, things, self.pairs):
+                        self.done = 1
+                        audio.sfx('seal')
+                    else:
+                        self.flash = 30
+                return
+
+    def draw(self) -> None:
+        dim()
+        s = SESSION.state
+        ui.panel(12, 12, W - 24, H - 24, 'paper')
+        by_id = {t['id']: t for t in self.things}
+        for i, o in enumerate(self.owners):
+            x, y, w, h = self.slot_rect(i)
+            cells, _ = glyphline.layout(s, o['zh'])
+            glyphline.draw_row(s, cells, 20, y + 6, P.INK, hover=False)
+            pyxel.rect(x, y, w, h, P.WHITE)
+            pyxel.rectb(x, y, w, h, P.OCHRE)
+            if o['id'] in self.pairs:
+                draw_thing(by_id[self.pairs[o['id']]]['traits'], x + 1, y + 2)
+        placed = set(self.pairs.values())
+        for k, t in enumerate(self.things):
+            x, y, w, h = self.thing_rect(k)
+            pyxel.rect(x, y, w, h, P.LAMP if self.sel == t['id'] else P.PAPER)
+            pyxel.rectb(x, y, w, h, P.STONE)
+            if t['id'] in placed:
+                pyxel.dither(0.35)
+            draw_thing(t['traits'], x + 1, y + 2)
+            pyxel.dither(1.0)
+        if self.done:
+            text.center(W // 2, 150, '都找到了！谢谢你！', P.JADE)
+        elif self.flash:
+            text.center(W // 2, 150, '不对……再看看！', P.VERMILION)
+        else:
+            text.center(W // 2, 150, 'Выберите вещь справа, затем — хозяина.', P.STONE, small=True)
+
+
+# ---------------------------------------------------------------- building glyphs from parts
+
+
+@puzzle('compose')
+class ComposeGlyphs(Screen):
+    """Build glyphs from two parts side by side or one above the other.
+
+    recipes: [{'a': '人', 'b': '木', 'layout': 'lr', 'result': '休'}, …]
+    targets: [{'hint': '一个人在树旁边休息。', 'result': '休'}, …]
+    """
+
+    def __init__(self, parts: str, recipes: list[dict[str, str]], targets: list[dict[str, str]], lines: list[str] | None = None) -> None:
+        super().__init__()
+        from ..core.puzzles import Recipe
+
+        self.parts = list(parts)
+        self.recipes = [Recipe(r['a'], r['b'], r['layout'], r['result']) for r in recipes]
+        self.targets = targets
+        self.i = 0
+        self.a: str | None = None
+        self.b: str | None = None
+        self.layout = 'lr'
+        self.flash = 0
+        self.made = 0
+        self.done = 0
+        self.b_layout = ui.Button(196, 104, 90, 15, 'Расположение', small=True)
+        self.b_clear = ui.Button(196, 124, 90, 15, 'Очистить', small=True)
+        show_lines(lines or [t['hint'] for t in targets])
+
+    def part_rect(self, k: int) -> tuple[int, int, int, int]:
+        return 28 + k * 22, 146, 20, 20
+
+    def update(self) -> None:
+        from ..core.puzzles import compose
+
+        self.flash = max(0, self.flash - 1)
+        if self.done:
+            self.done += 1
+            if self.done > 40 or (self.done > 10 and INPUT.click_anywhere()):
+                self.close(True)
+            return
+        if self.made:
+            self.made -= 1
+            if self.made == 0:
+                self.i += 1
+                self.a = self.b = None
+                if self.i >= len(self.targets):
+                    self.done = 1
+            return
+        if INPUT.cancel():
+            self.close(False)
+            return
+        for k, g in enumerate(self.parts):
+            if INPUT.click(*self.part_rect(k)):
+                if self.a is None:
+                    self.a = g
+                elif self.b is None:
+                    self.b = g
+                else:
+                    self.a, self.b = self.b, g
+                audio.sfx('tap')
+                break
+        if self.b_layout.update():
+            self.layout = 'tb' if self.layout == 'lr' else 'lr'
+        if self.b_clear.update():
+            self.a = self.b = None
+        if self.a and self.b:
+            result = compose(self.recipes, self.a, self.b, self.layout)
+            if result and result == self.targets[self.i]['result']:
+                SESSION.state.confirmed[result] = True
+                from ..core import journal
+
+                journal.see(SESSION.state, result)
+                self.made = 45
+                audio.sfx('seal')
+            elif result is None and INPUT.pressed:
+                self.flash = 20
+
+    def draw(self) -> None:
+        dim()
+        s = SESSION.state
+        ui.panel(12, 12, W - 24, H - 24, 'paper')
+        if self.done:
+            text.center(W // 2, 80, '你会造字了！', P.JADE)
+            return
+        t = self.targets[self.i]
+        cells, lw = glyphline.layout(s, t['hint'])
+        glyphline.draw_row(s, cells, W // 2 - lw // 2, 18, P.INK, hover=False)
+        text.draw(22, 44, f'Знак {self.i + 1} из {len(self.targets)}', P.STONE, small=True)
+        # the two parts, placed as chosen
+        pyxel.rect(60, 56, 84, 84, P.WHITE)
+        pyxel.rectb(60, 56, 84, 84, P.STONE)
+        b = text.brush()
+        if self.made:
+            if b.has(t['result']):
+                b.draw(62, 58, t['result'], P.INK, P.STONE, P.GREY, scale=2.0)
+            else:
+                text.draw(96, 92, t['result'], P.INK)
+            return
+        for idx, g in enumerate((self.a, self.b)):
+            if not g:
+                continue
+            if self.layout == 'lr':
+                x, y = 64 + idx * 40, 78
+            else:
+                x, y = 82, 60 + idx * 40
+            if b.has(g):
+                b.draw(x, y, g, P.INK, P.STONE, P.GREY)
+            else:
+                text.draw(x + 14, y + 14, g, P.INK)
+        self.b_layout.draw()
+        self.b_clear.draw()
+        text.draw(196, 62, 'Выберите две части внизу.', P.STONE, small=True)
+        text.draw(196, 74, 'Расположение: ' + ('рядом' if self.layout == 'lr' else 'одна над другой'), P.INK, small=True)
+        for k, g in enumerate(self.parts):
+            glyphline.glyph_box(s, g, *self.part_rect(k)[:2], 20)
+        if self.flash:
+            text.draw(196, 88, 'Такого знака нет.', P.VERMILION, small=True)

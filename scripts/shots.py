@@ -81,7 +81,13 @@ def main() -> None:
     pt.solve_open_pages(g, 3)
     pt.play_chapter4(g, climb=True)
     pt.solve_open_pages(g, 4)
-    pt.play_chapter5(g)
+    pt.play_chapter5(g, climb=True)
+    pt.solve_open_pages(g, 5)
+    pt.play_chapter6(g, climb=True)
+    pt.solve_open_pages(g, 6)
+    pt.play_chapter7(g, climb=True)
+    pt.solve_open_pages(g, 7)
+    pt.play_chapter8(g)
 
     for scene_id, st in states:
         if only is not None and st.chapter != only:
@@ -98,6 +104,37 @@ def main() -> None:
             view.bubbles = [bubbles.Bubble(SESSION.state, '你好！你要去哪儿？', view.rt._anchor(a.id))]
             shot(f'bubble-{scene_id}')
             view.bubbles = []
+
+    if only == 7:
+        from richu.content.chapters.ch7 import LOST_OWNERS, LOST_THINGS
+        from richu.ui.puzzles import LostAndFound
+
+        SESSION.state = copy.deepcopy(g.state)  # type: ignore[assignment]
+        view = SceneView()
+        APP.replace_all(view)
+        view.load('7b')
+        lf = LostAndFound(LOST_OWNERS, LOST_THINGS)
+        lf.pairs = {'girl7': 't2'}
+        lf.sel = 't3'
+        APP.push(lf)
+        shot('puzzle-lost')
+        print(f'{n} screenshots in {out}')
+        return
+
+    if only == 8:
+        from richu.content.chapters.ch8 import RECIPES, TARGETS
+        from richu.ui.puzzles import ComposeGlyphs
+
+        SESSION.state = copy.deepcopy(g.state)  # type: ignore[assignment]
+        view = SceneView()
+        APP.replace_all(view)
+        view.load('8a')
+        cg = ComposeGlyphs('人木日月一十口', RECIPES, TARGETS)
+        cg.i, cg.a, cg.b, cg.layout = 3, '日', '一', 'tb'
+        APP.push(cg)
+        shot('puzzle-compose')
+        print(f'{n} screenshots in {out}')
+        return
 
     if only == 5:
         from richu.core import talisman as TL

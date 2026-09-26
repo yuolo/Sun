@@ -185,13 +185,17 @@ def play_chapter3(g: HeadlessGame, climb: bool = False) -> None:
     g.plan('face', True).talk('teacher')
     assert s.on('face_done')
     g.answer('红').talk('xiaohong')
+    g.talk('xiaohong')
     g.answer('喜欢').talk('pangpang')
+    g.talk('pangpang')
     g.talk('teacher')
     assert s.on('exam_started')
     g.use('pencil', 'xiaolong')
     g.talk('teacher')
     g.talk('xiaolong')
     assert 'drawing' in s.inventory
+    for _ in range(3):
+        g.talk('xiaolong')
     g.click('blackboard')
     assert g.exit('door') and s.scene == '3b'
     g.solve_page('elements')
@@ -246,10 +250,12 @@ def play_chapter4(g: HeadlessGame, climb: bool = False) -> None:
     g.answer('鸟').talk('storyteller')
     g.answer('飞').talk('storyteller')
     assert 'diary_8' in s.texts
+    g.talk('storyteller')
+    g.talk('storyteller')
     g.read('diary_8')
-    for _ in range(4):
+    for _ in range(5):
         g.talk('manager')
-    for _ in range(3):
+    for _ in range(4):
         g.talk('bride')
         g.talk('student4')
     g.answer('好').talk('groom')
@@ -280,6 +286,8 @@ def play_chapter5(g: HeadlessGame, climb: bool = False) -> None:
     assert not g.exit('valley')
     g.plan('talisman', '门开').click('talisman')
     assert s.on('doumu_open')
+    g.talk('pilgrim5')
+    g.talk('pilgrim5')
     g.answer('李明').talk('nun')
     assert s.on('nun_met')
     g.use('lamp', 'nun')
@@ -312,10 +320,109 @@ def play_chapter5(g: HeadlessGame, climb: bool = False) -> None:
     g.talk('zhao')
     g.plan('bells', True).talk('monk')
     assert s.on('bells_done') and 'coat' in s.inventory
-    for _ in range(3):
+    for _ in range(5):
         g.talk('father5')
         g.talk('kid5')
     g.click('cablecar')
     g.talk('xiaoyue')
     if climb:
         assert g.exit('up')
+
+
+def play_chapter6(g: HeadlessGame, climb: bool = False) -> None:
+    """Fog at the Cloud-step bridge, rain under the pine, the porters' chant on the Eighteen Bends."""
+    s = g.state
+    assert s.scene == '6a' and s.chapter == 6
+    assert not g.exit('up')
+    g.talk('zhao6')
+    g.plan('choose', 0, 1, 2).click('fork')
+    assert s.on('fog_done')
+    assert g.exit('up') and s.scene == '6b'
+    g.read('diary_12')
+    g.click('stele')
+    g.talk('hiker6')
+    g.cast('雨停', 'pine')
+    if not s.on('rain_stopped'):
+        g.use('umbrella', 'hiker6')
+    g.talk('hiker6')
+    assert g.exit('up') and s.scene == '6c'
+    g.read('diary_13')
+    g.talk('tired')
+    g.use('drink', 'tired') if 'drink' in s.inventory else g.use('pancake', 'tired')
+    assert s.on('tired_ok')
+    g.plan('choose', 0, 1, 2).talk('zhao7')
+    assert s.on('chant_done')
+    g.talk('zhao7')
+    g.talk('tired')
+    if climb:
+        assert g.exit('up')
+
+
+def play_chapter7(g: HeadlessGame, climb: bool = False) -> None:
+    """The South Gate, the lost and found, the fox's riddles, the couplets and the dragon."""
+    s = g.state
+    assert s.scene == '7a' and s.chapter == 7
+    g.read('diary_14')
+    g.talk('keeper7')
+    assert not g.exit('street')
+    g.plan('talisman', '南天门').click('board')
+    assert s.on('sgate_fixed')
+    g.answer('我要看日出').talk('keeper7')
+    assert s.on('sgate_pass')
+    assert g.exit('street') and s.scene == '7b'
+    g.plan('lost', True).answer('能').talk('lostfound')
+    assert s.on('lost_done')
+    g.talk('lostfound')
+    g.talk('lostfound')
+    g.talk('girl7')
+    for _ in range(3):
+        for who in ('grandpa7', 'woman7', 'student7', 'musician'):
+            g.talk(who)
+    g.answer('要').talk('cook')
+    g.use('money', 'cook')
+    assert 'noodles7' in s.inventory
+    g.answer('感兴趣', '告').talk('fox')
+    g.answer('坐').talk('fox')
+    assert s.on('fox_done') and 'scroll' in s.inventory
+    g.solve_page('dragon')
+    assert g.exit('temple') and s.scene == '7c'
+    g.plan('choose', 1, 2, 0).answer('能').talk('tkeeper')
+    assert s.on('couplets_done')
+    g.talk('tkeeper')
+    g.cast('画龙点睛', 'dragon')
+    assert s.on('dragon_flew')
+    for _ in range(3):
+        g.talk('tkeeper')
+    assert g.exit('moon') and s.scene == '7d'
+    g.answer('想').talk('poet')
+    g.talk('poet')
+    g.talk('poet')
+    g.click('rock')
+    assert g.exit('temple') and s.scene == '7c'
+    if climb:
+        assert g.exit('peak')
+
+
+def play_chapter8(g: HeadlessGame) -> None:
+    """Building glyphs on the Jade Emperor peak; the letter, the clouds and the sunrise with Li Ming."""
+    s = g.state
+    assert s.scene == '8a' and s.chapter == 8
+    assert not g.exit('sun')
+    g.plan('compose', True).talk('scholar8')
+    assert s.on('compose_done') and s.confirmed.get('旦')
+    g.click('stele')
+    g.talk('scholar8')
+    g.solve_page('sky8')
+    assert g.exit('sun') and s.scene == '8b'
+    g.answer('我爷爷是小安').talk('liming')
+    assert s.on('lm_met')
+    g.use('old_photo', 'liming')
+    g.use('letter', 'liming')
+    assert s.on('letter_given')
+    g.cast('风吹云开', 'sky')
+    assert s.on('clouds_open')
+    g.answer('我们看见日出了')
+    g.cast('日出', 'sky')
+    assert s.on('sunrise') and s.finished
+    assert s.inscription == '我们看见日出了'
+    assert 'email_xiaoyue' in s.texts

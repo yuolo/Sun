@@ -84,9 +84,10 @@ class HeadlessContext:
 
     async def puzzle(self, kind: str, **params: Any) -> Any:
         self.events.append(f'puzzle:{kind}')
-        # lines the puzzle window shows (a lesson, a riddle) are read by the player
-        for line in params.get('lines') or ():
+        # what the puzzle window shows (a lesson, a list, the options) is read by the player
+        for line in puzzle_texts(params):
             journal.see(self.state, line)
+            journal.record_line(self.state, 'puzzle', line, self.state.scene)
         queue = self.solutions.get(kind)
         if not queue:
             raise AssertionError(f'no planned solution for puzzle {kind} {params}')
@@ -137,6 +138,15 @@ class HeadlessContext:
         self.state.scene = scene_id
         self.state.px = int(WalkPath(scene.path).clamp(scene.entries[entry]))
         await interact.enter_scene(self, scene)
+
+
+def puzzle_texts(params: dict[str, Any]) -> list[str]:
+    """Chinese texts a puzzle window displays: its lines and the labels of its options, rows and orders."""
+    out = [str(x) for x in params.get('lines') or ()]
+    for key in ('options', 'rows', 'orders', 'owners'):
+        out += [str(d['zh']) for d in params.get(key) or () if isinstance(d, dict) and d.get('zh')]
+    out += [str(d['hint']) for d in params.get('targets') or () if isinstance(d, dict) and d.get('hint')]
+    return out
 
 
 class HeadlessGame:

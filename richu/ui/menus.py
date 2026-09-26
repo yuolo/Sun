@@ -14,7 +14,7 @@ from ..core.state import START
 from ..engine import text, ui
 from ..engine.app import APP, H, W, Screen
 from ..engine.input import INPUT
-from . import audio
+from . import audio, glyphline
 from .session import SESSION
 
 
@@ -270,15 +270,25 @@ class Ending(Screen):
         seen, conf, total = journal.progress(s)
         words = journal.met_words(s)
         understood = sum(1 for w in words if journal.word_understood(s, w))
-        lines = [
-            'Восход',
-            '',
+        stats = [
             f'Встречено знаков: {seen}, понято: {conf}',
             f'Слов HSK 1–3 понято: {understood} из 601',
             f'Заклинаний: {len(s.spells)}',
             f'В пути: {s.play_frames // 30 // 60} мин',
-            '',
-            'Спасибо, что прошли этот путь.',
         ]
-        for i, ln in enumerate(lines):
-            text.center(W // 2, 64 + i * 13, ln, P.INK if i else P.LACQUER)
+        y = 60
+        text.center(W // 2, y, 'Восход', P.LACQUER)
+        y += 18
+        for ln in stats:
+            text.center(W // 2, y, ln, P.INK)
+            y += 12
+        y += 6
+        if s.inscription:
+            text.center(W // 2, y, 'Ваша строка деду:', P.STONE, small=True)
+            y += 12
+            cells, lw = glyphline.layout(s, s.inscription)
+            glyphline.draw_row(s, cells, W // 2 - lw // 2, y, P.VERMILION, hover=False)
+            y += 28
+        text.center(W // 2, min(y, H - 14), 'Спасибо, что прошли этот путь.', P.INK)
+
+

@@ -70,7 +70,7 @@ class E2E:
         HeadlessGame.answer), and so are the planned puzzle results in ``plans``.
         """
         from richu.ui.composer import AnswerPad
-        from richu.ui.menus import ChapterCard
+        from richu.ui.menus import ChapterCard, Ending
         from richu.ui.puzzles import PUZZLES
         from richu.ui.reader import Reader
 
@@ -80,6 +80,8 @@ class E2E:
         for _ in range(max_frames):
             top = APP.top
             v = self.view
+            if isinstance(top, Ending):
+                return 'ending'
             if isinstance(top, ChapterCard):
                 self.d.step(25)
                 self.d.key(pyxel.KEY_SPACE)
@@ -154,8 +156,13 @@ class E2E:
             ('pages 3', lambda: pt.solve_open_pages(g, 3)),
             ('chapter 4', lambda: pt.play_chapter4(g, climb=True)),
             ('pages 4', lambda: pt.solve_open_pages(g, 4)),
-            ('chapter 5', lambda: pt.play_chapter5(g)),
+            ('chapter 5', lambda: pt.play_chapter5(g, climb=True)),
             ('pages 5', lambda: pt.solve_open_pages(g, 5)),
+            ('chapter 6', lambda: pt.play_chapter6(g, climb=True)),
+            ('pages 6', lambda: pt.solve_open_pages(g, 6)),
+            ('chapter 7', lambda: pt.play_chapter7(g, climb=True)),
+            ('pages 7', lambda: pt.solve_open_pages(g, 7)),
+            ('chapter 8', lambda: pt.play_chapter8(g)),
         ]
         for name, play in chapters:
             try:
@@ -165,6 +172,19 @@ class E2E:
                 self.check(False, f'{name}: {e} (in {self.s.scene})')
                 break
             self.shot(name.replace(' ', ''))
+        from richu.ui.menus import Ending
+
+        ended = isinstance(APP.top, Ending)
+        self.check(ended or self.s.chapter < 8, 'the story reaches the ending')
+        if ended:
+            self.shot('ending')
+            APP.top.close()
+            self.d.step(3)
+        if self.view is None or APP.top is not self.view:
+            print(f'{time.time() - t0:.1f}s, {len(self.errors)} errors')
+            for e in self.errors:
+                print('  ', e)
+            return 1 if self.errors else 0
         # the journal opens and closes
         self.d.key(pyxel.KEY_J)
         self.d.step(3)

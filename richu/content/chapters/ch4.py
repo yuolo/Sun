@@ -170,7 +170,7 @@ async def porter_talk(c: ScriptContext) -> None:
         else:
             await c.say('porter', '不是？没关系。')
         await c.say('porter', '我老了。以前我一天上山两次，现在一次也很累。')
-        await c.say('porter', '药店就在那儿，可是我走不动了。')
+        await c.say('porter', '药店就在那儿，可是我走不动了。我需要休息一下。')
         c.set('porter_met')
         return
     await c.say('porter', '我的腿很疼……药店就在那儿。')
@@ -247,6 +247,7 @@ async def pharmacist_item(c: ScriptContext, item: str) -> bool:
         if await pay(c, 'pharmacist', 30, item):
             c.give('medicine')
             await c.say('pharmacist', '一天吃两次。希望你的朋友快点儿好！')
+            await c.say('pharmacist', '山上没有医院，你们要小心。')
         return True
     return False
 

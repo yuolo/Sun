@@ -83,6 +83,10 @@ async def enter_scene(c: 'ScriptContext', scene: SceneDef) -> None:
     first = scene.id not in s.visited
     if first:
         s.visited.append(scene.id)
+    if scene.zh:
+        # the place name shows on the map
+        journal.see(s, scene.zh)
+        journal.record_line(s, 'place', scene.zh, scene.id)
     see_signs(scene, s)
     for text_id in scene.diary:
         c.unlock(text_id)

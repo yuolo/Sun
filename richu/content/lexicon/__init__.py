@@ -7,10 +7,10 @@ origin, living words, icon and magic tags.
 from __future__ import annotations
 
 from ...core.types import GlyphDef
-from . import ch0, ch1, ch2, ch3, ch4, ch5, ch6
+from . import ch0, ch1, ch2, ch3, ch4, ch5, ch6, ch7, ch8
 
 LEXICON: dict[str, GlyphDef] = {}
-for _mod in (ch0, ch1, ch2, ch3, ch4, ch5, ch6):
+for _mod in (ch0, ch1, ch2, ch3, ch4, ch5, ch6, ch7, ch8):
     for _g in _mod.GLYPHS:
         if _g.ch in LEXICON:
             raise ValueError(f'duplicate lexicon entry {_g.ch}')
