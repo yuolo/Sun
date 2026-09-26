@@ -7,7 +7,9 @@ from richu import platform
 from richu.content import pages as PG
 from richu.content.world import load
 from richu.core import journal
+from richu.content import lexicon
 from richu.core.headless import HeadlessGame
+from richu.core.phrases import is_han
 from richu.devtools.playthrough import play_chapter1, play_chapter2, play_prologue, solve_open_pages
 
 platform.use_memory_storage()
@@ -77,3 +79,45 @@ def test_chapter3_the_village():
     missing = [(p.id, [c for c in journal.page_chars(p) if c not in g.state.seen]) for p in PG.PAGES
                if p.chapter == 3 and p.id not in solved and p.id != 'elements']
     assert not missing, f'pages still closed after chapter 3: {missing}'
+
+
+def test_chapter4_the_red_gate():
+    from richu.devtools.playthrough import play_chapter3, play_chapter4
+
+    g = HeadlessGame()
+    play_prologue(g)
+    play_chapter1(g)
+    solve_open_pages(g, 1)
+    play_chapter2(g, sleep=True)
+    solve_open_pages(g, 2)
+    play_chapter3(g, climb=True)
+    solve_open_pages(g, 3)
+    play_chapter4(g)
+    solved = solve_open_pages(g, 4)
+    missing = [(p.id, [c for c in journal.page_chars(p) if c not in g.state.seen]) for p in PG.PAGES
+               if p.chapter == 4 and p.id not in solved]
+    assert not missing, f'pages still closed after chapter 4: {missing}'
+    unknown = sorted({ch for line in g.state.log for ch in line.text if is_han(ch) and not lexicon.known(ch)})
+    assert not unknown, f'glyphs missing from the lexicon: {"".join(unknown)}'
+
+
+def test_chapter5_zhongtianmen():
+    from richu.devtools.playthrough import play_chapter3, play_chapter4, play_chapter5
+
+    g = HeadlessGame()
+    play_prologue(g)
+    play_chapter1(g)
+    solve_open_pages(g, 1)
+    play_chapter2(g, sleep=True)
+    solve_open_pages(g, 2)
+    play_chapter3(g, climb=True)
+    solve_open_pages(g, 3)
+    play_chapter4(g, climb=True)
+    solve_open_pages(g, 4)
+    play_chapter5(g)
+    solved = solve_open_pages(g, 5)
+    missing = [(p.id, [c for c in journal.page_chars(p) if c not in g.state.seen]) for p in PG.PAGES
+               if p.chapter == 5 and p.id not in solved]
+    assert not missing, f'pages still closed after chapter 5: {missing}'
+    unknown = sorted({ch for line in g.state.log for ch in line.text if is_han(ch) and not lexicon.known(ch)})
+    assert not unknown, f'glyphs missing from the lexicon: {"".join(unknown)}'

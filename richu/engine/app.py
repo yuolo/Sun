@@ -139,7 +139,8 @@ def draw_cursor(kind: str) -> None:
 
 
 def init(headless: bool = False) -> None:
-    pyxel.init(W, H, title=TITLE, fps=FPS, quit_key=pyxel.KEY_NONE, headless=headless, capture_scale=4)
+    # headless runs (tests, screenshots) don't need real time: logic counts frames, not seconds
+    pyxel.init(W, H, title=TITLE, fps=FPS if not headless else 1000, quit_key=pyxel.KEY_NONE, headless=headless, capture_scale=4)
     palette.apply()
     text.load()
     APP.headless = headless

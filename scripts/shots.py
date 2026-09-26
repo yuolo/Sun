@@ -77,7 +77,11 @@ def main() -> None:
     pt.solve_open_pages(g, 1)
     pt.play_chapter2(g, sleep=True)
     pt.solve_open_pages(g, 2)
-    pt.play_chapter3(g)
+    pt.play_chapter3(g, climb=True)
+    pt.solve_open_pages(g, 3)
+    pt.play_chapter4(g, climb=True)
+    pt.solve_open_pages(g, 4)
+    pt.play_chapter5(g)
 
     for scene_id, st in states:
         if only is not None and st.chapter != only:
@@ -94,6 +98,51 @@ def main() -> None:
             view.bubbles = [bubbles.Bubble(SESSION.state, '你好！你要去哪儿？', view.rt._anchor(a.id))]
             shot(f'bubble-{scene_id}')
             view.bubbles = []
+
+    if only == 5:
+        from richu.core import talisman as TL
+        from richu.ui.puzzles import Bells, TalismanEditor
+
+        st = copy.deepcopy(g.state)
+        st.flags.pop('tal:doumu_gate', None)
+        st.flags.pop('doumu_open', None)
+        SESSION.state = st  # type: ignore[assignment]
+        view = SceneView()
+        APP.replace_all(view)
+        view.load('5a')
+        shot('scene-5a-closed')
+        APP.push(TalismanEditor(TL.TALISMANS['doumu_gate']))
+        shot('puzzle-talisman')
+        SESSION.state = copy.deepcopy(g.state)  # type: ignore[assignment]
+        view = SceneView()
+        APP.replace_all(view)
+        view.load('5d')
+        APP.push(Bells('风雨日云月', '雨云月', ['雨后云开月出来']))
+        shot('puzzle-bells')
+        print(f'{n} screenshots in {out}')
+        return
+
+    if only == 4:
+        from richu.content.chapters.ch4 import CARGO
+        from richu.ui.puzzles import CargoList, TeaTray
+
+        SESSION.state = copy.deepcopy(g.state)  # type: ignore[assignment]
+        view = SceneView()
+        APP.replace_all(view)
+        view.load('4a')
+        cl = CargoList(CARGO)
+        cl.ok[0] = True
+        cl.row = 1
+        APP.push(cl)
+        shot('puzzle-cargo')
+        APP.replace_all(view)
+        view.load('4b')
+        tt = TeaTray([{'zh': '二号桌：一碗面条，一杯牛奶', 'want': {'noodles': 1, 'milk': 1}}])
+        tt.tray = ['noodles']
+        APP.push(tt)
+        shot('puzzle-tray')
+        print(f'{n} screenshots in {out}')
+        return
 
     if only == 3:
         from richu.ui.composer import BrushPad

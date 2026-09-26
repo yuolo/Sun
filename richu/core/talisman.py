@@ -21,6 +21,20 @@ class TalismanDef:
     max_len: int = 6
 
 
+TALISMANS: dict[str, TalismanDef] = {}
+
+
+def register(*ts: TalismanDef) -> None:
+    for t in ts:
+        TALISMANS[t.id] = t
+
+
+def text_of(s: GameState, talisman_id: str, default: str) -> str:
+    """What a talisman sign shows now (its edited text)."""
+    t = TALISMANS.get(talisman_id)
+    return current(s, t) if t else default
+
+
 def current(s: GameState, t: TalismanDef) -> str:
     v = s.flags.get(f'tal:{t.id}')
     return v if isinstance(v, str) else t.text

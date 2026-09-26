@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
-from . import interact, journal, talisman
+from . import interact, journal
 from .path import WalkPath
 from .phrases import glyphs_of
 from .state import START, GameState
@@ -93,8 +93,13 @@ class HeadlessContext:
         sol = queue.pop(0)
         result = sol(**params) if callable(sol) else sol
         if kind == 'talisman' and isinstance(result, str):
-            tal = params['talisman']
-            talisman.apply(self.state, tal, result)
+            # the brush writes only understood glyphs; erasing and swapping need none
+            from .talisman import current
+
+            old = current(self.state, params['talisman'])
+            for g in result:
+                if g not in old and not self.state.confirmed.get(g):
+                    raise AssertionError(f'the brush cannot write {g}: not understood yet')
         return result
 
     # ---------------------------------------------------------------- stage

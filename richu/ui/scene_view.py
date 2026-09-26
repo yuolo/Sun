@@ -711,7 +711,7 @@ class SceneView(Screen):
     # ---------------------------------------------------------------- signs
 
     def _sign_box(self, sign: SignDef) -> tuple[int, int, int, int, list[str]]:
-        lines = sign.text.split('\n')
+        lines = interact.sign_text(sign, self.s).split('\n')
         if sign.vertical:
             cols = lines
             w = len(cols) * 14 + 4
@@ -726,6 +726,9 @@ class SceneView(Screen):
         if not self.scene:
             return None
         for sign in interact.visible_signs(self.scene, self.s):
+            if sign.talisman:
+                # an acting inscription is edited with the brush, not looked up
+                continue
             x, y, w, h, lines = self._sign_box(sign)
             if not INPUT.inside(x, y, w, h):
                 continue

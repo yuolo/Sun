@@ -118,7 +118,7 @@ class TalismanEditor(Screen):
             if sel:
                 pyxel.rectb(x - 1, y - 1, 24, 28, P.VERMILION)
             if text.brush().has(self.text[i]):
-                text.brush().draw(x - 9, y - 7, self.text[i], P.VERMILION, P.RED, P.ORANGE, scale=0.55)
+                text.brush().draw(x, y + 2, self.text[i], P.VERMILION, P.RED, P.ORANGE, scale=0.55)
             else:
                 text.draw(x + 5, y + 6, self.text[i], P.VERMILION)
         for b in (self.b_erase, self.b_write, self.b_swap):
@@ -419,3 +419,307 @@ class FaceGame(Screen):
         text.center(250, 140, 'Покажите на доске.', P.STONE, small=True)
         if self.flash and self.wrong:
             text.draw(self.wrong[0] + 4, self.wrong[1] - 14, '不对！', P.VERMILION)
+
+
+# ---------------------------------------------------------------- the porter's list
+
+
+def _mini(name: str, x: int, y: int) -> None:
+    """A tiny countable thing (about 6×9)."""
+    if name == 'bottle':
+        pyxel.rect(x + 2, y, 2, 2, P.JADE)
+        pyxel.rect(x + 1, y + 2, 4, 7, P.LIGHT_BLUE)
+        pyxel.rectb(x + 1, y + 2, 4, 7, P.INK)
+    elif name == 'sack':
+        pyxel.circ(x + 3, y + 5, 3, P.PAPER)
+        pyxel.circb(x + 3, y + 5, 3, P.INK)
+        pyxel.line(x + 2, y + 1, x + 4, y + 1, P.WOOD)
+    elif name == 'shoes':
+        for dx in (0, 5):
+            pyxel.rect(x + dx, y + 3, 4, 3, P.JADE)
+            pyxel.rect(x + dx, y + 6, 5, 2, P.WHITE)
+            pyxel.rectb(x + dx, y + 3, 5, 5, P.INK)
+    elif name == 'book':
+        pyxel.rect(x, y + 1, 6, 8, P.DARK_BLUE)
+        pyxel.rectb(x, y + 1, 6, 8, P.INK)
+        pyxel.line(x + 2, y + 3, x + 4, y + 3, P.WHITE)
+    else:
+        icons.draw(name, x - 4, y - 3, 0.5)
+
+
+def icon_group(name: str, n: int, x: int, y: int, per_row: int = 5) -> None:
+    """``n`` small countable copies of a thing, in rows."""
+    step = 12 if name == 'shoes' else 8
+    per_row = 3 if name == 'shoes' else per_row
+    for i in range(n):
+        _mini(name, x + (i % per_row) * step, y + (i // per_row) * 12)
+
+
+@puzzle('cargo')
+class CargoList(Screen):
+    """Read a list of goods (number + measure word) and pick the right pile for each line.
+
+    rows: [{'zh': '水　十瓶', 'icon': 'bottle', 'n': 10, 'options': [5, 10, 15]}, …]
+    """
+
+    def __init__(self, rows: list[dict[str, Any]], lines: list[str] | None = None, title: str = '单子') -> None:
+        super().__init__()
+        from ..core import journal
+
+        self.rows = rows
+        self.title = title
+        self.row = 0
+        self.ok: list[bool] = [False] * len(rows)
+        self.flash = 0
+        self.done = 0
+        for ln in (lines or [r['zh'] for r in rows]):
+            journal.see(SESSION.state, ln)
+
+    def option_rect(self, i: int) -> tuple[int, int, int, int]:
+        return 146 + i * 52, 70, 48, 52
+
+    def update(self) -> None:
+        self.flash = max(0, self.flash - 1)
+        if self.done:
+            self.done += 1
+            if self.done > 40 or (self.done > 10 and INPUT.click_anywhere()):
+                self.close(True)
+            return
+        if INPUT.cancel():
+            self.close(False)
+            return
+        for i in range(len(self.rows)):
+            if INPUT.click(26, 44 + i * 20, 110, 18):
+                self.row = i
+                return
+        r = self.rows[self.row]
+        for i, n in enumerate(r['options']):
+            if INPUT.click(*self.option_rect(i)):
+                if n == r['n']:
+                    self.ok[self.row] = True
+                    audio.sfx('tap')
+                    nxt = [k for k in range(len(self.rows)) if not self.ok[k]]
+                    if nxt:
+                        self.row = nxt[0]
+                    else:
+                        self.done = 1
+                        audio.sfx('seal')
+                else:
+                    self.flash = 25
+                return
+
+    def draw(self) -> None:
+        dim()
+        s = SESSION.state
+        ui.panel(12, 12, W - 24, H - 24, 'paper')
+        # the list on a slip of paper
+        pyxel.rect(22, 22, 118, 20 + len(self.rows) * 20, P.WHITE)
+        pyxel.rectb(22, 22, 118, 20 + len(self.rows) * 20, P.STONE)
+        cells, lw = glyphline.layout(s, self.title, notes=False)
+        glyphline.draw_row(s, cells, 22 + (118 - lw) // 2, 24, P.INK, hover=False)
+        for i, r in enumerate(self.rows):
+            y = 44 + i * 20
+            if i == self.row and not self.done:
+                pyxel.rect(24, y - 1, 114, 19, P.LAMP)
+            cells, _ = glyphline.layout(s, r['zh'], notes=False)
+            glyphline.draw_row(s, cells, 30, y + 2, P.INK, hover=False)
+            if self.ok[i]:
+                pyxel.circ(132, y + 8, 2, P.JADE)
+        if self.done:
+            text.center(214, 90, '都对了！', P.JADE)
+            return
+        r = self.rows[self.row]
+        for i, n in enumerate(r['options']):
+            x, y, w, h = self.option_rect(i)
+            hover = INPUT.inside(x, y, w, h)
+            pyxel.rect(x, y, w, h, P.LAMP if hover else P.PAPER)
+            pyxel.rectb(x, y, w, h, P.OCHRE)
+            icon_group(r['icon'], n, x + 8, y + 8)
+        text.center(214, 132, 'Какая груда подходит к строке?', P.STONE, small=True)
+        if self.flash:
+            text.center(214, 146, '不对！', P.VERMILION)
+
+
+# ---------------------------------------------------------------- the teahouse tray
+
+TRAY_GOODS: dict[str, tuple[str, str]] = {
+    # id: (icon, the word for it)
+    'tea': ('tea', '茶'),
+    'coffee': ('coffee', '咖啡'),
+    'milk': ('milk', '牛奶'),
+    'noodles': ('noodles', '面条'),
+    'rice': ('rice', '米饭'),
+    'beer': ('beer', '啤酒'),
+    'water': ('water_glass', '水'),
+}
+
+
+@puzzle('tray')
+class TeaTray(Screen):
+    """Carry orders: read what a table wants and put it on the tray.
+
+    orders: [{'zh': '两杯茶', 'want': {'tea': 2}}, …]
+    """
+
+    def __init__(self, orders: list[dict[str, Any]], lines: list[str] | None = None) -> None:
+        super().__init__()
+        from ..core import journal
+
+        self.orders = orders
+        self.i = 0
+        self.tray: list[str] = []
+        self.flash = 0
+        self.done = 0
+        self.shelf = list(TRAY_GOODS)
+        self.b_serve = ui.Button(W - 86, 130, 62, 16, '送', style='seal')
+        self.b_clear = ui.Button(W - 150, 130, 58, 16, 'Убрать', small=True)
+        for ln in (lines or [o['zh'] for o in orders]):
+            journal.see(SESSION.state, ln)
+
+    def shelf_rect(self, k: int) -> tuple[int, int, int, int]:
+        return 24 + k * 38, 92, 34, 32
+
+    def update(self) -> None:
+        from ..core.puzzles import check_list
+
+        self.flash = max(0, self.flash - 1)
+        if self.done:
+            self.done += 1
+            if self.done > 40 or (self.done > 10 and INPUT.click_anywhere()):
+                self.close(True)
+            return
+        if INPUT.cancel():
+            self.close(False)
+            return
+        for k, gid in enumerate(self.shelf):
+            if INPUT.click(*self.shelf_rect(k)) and len(self.tray) < 6:
+                self.tray.append(gid)
+                audio.sfx('tap')
+                return
+        for k in range(len(self.tray)):
+            if INPUT.click(40 + k * 24, 55, 22, 22):
+                self.tray.pop(k)
+                return
+        if self.b_clear.update():
+            self.tray = []
+        if self.b_serve.update():
+            placed: dict[str, int] = {}
+            for gid in self.tray:
+                placed[gid] = placed.get(gid, 0) + 1
+            if not check_list(self.orders[self.i]['want'], placed):
+                audio.sfx('seal')
+                self.i += 1
+                self.tray = []
+                if self.i >= len(self.orders):
+                    self.done = 1
+            else:
+                self.flash = 30
+
+    def draw(self) -> None:
+        dim()
+        s = SESSION.state
+        ui.panel(12, 12, W - 24, H - 24, 'paper')
+        if self.done:
+            text.center(W // 2, 80, '谢谢！你帮了我很大的忙！', P.JADE)
+            return
+        o = self.orders[self.i]
+        text.draw(24, 16, f'Заказ {self.i + 1} из {len(self.orders)}', P.STONE, small=True)
+        cells, lw = glyphline.layout(s, o['zh'])
+        glyphline.draw_row(s, cells, W // 2 - lw // 2, 26, P.INK, hover=False)
+        # the tray
+        pyxel.elli(30, 52, 170, 30, P.WOOD)
+        pyxel.elli(33, 54, 164, 26, P.OCHRE)
+        for k, gid in enumerate(self.tray):
+            icons.draw(TRAY_GOODS[gid][0], 43 + k * 24, 58)
+        # the shelf: pictures only — read the order and find the things
+        for k, gid in enumerate(self.shelf):
+            x, y, w, h = self.shelf_rect(k)
+            hover = INPUT.inside(x, y, w, h)
+            pyxel.rect(x, y, w, h, P.LAMP if hover else P.WHITE)
+            pyxel.rectb(x, y, w, h, P.STONE)
+            icons.draw(TRAY_GOODS[gid][0], x + 9, y + 7)
+        self.b_clear.draw()
+        self.b_serve.draw()
+        text.draw(24, 152, 'Нажмите на вещь — она ляжет на поднос.', P.STONE, small=True)
+        if self.flash:
+            text.center(W // 2, 152, '不对！再看看单子。', P.VERMILION)
+
+
+# ---------------------------------------------------------------- the evening bells
+
+
+@puzzle('bells')
+class Bells(Screen):
+    """Ring the bells in the order the inscription names them."""
+
+    def __init__(self, bells: str, chant: str, lines: list[str] | None = None) -> None:
+        super().__init__()
+        from ..core import journal
+
+        self.bells = list(bells)
+        self.chant = chant
+        self.progress = 0
+        self.swing = [0] * len(self.bells)
+        self.flash = 0
+        self.done = 0
+        self.lines = lines or []
+        for ln in self.lines:
+            journal.see(SESSION.state, ln)
+
+    def bell_x(self, i: int) -> int:
+        n = len(self.bells)
+        return W // 2 - n * 26 + 13 + i * 52
+
+    def update(self) -> None:
+        from ..core.puzzles import ring
+
+        self.swing = [max(0, v - 1) for v in self.swing]
+        self.flash = max(0, self.flash - 1)
+        if self.done:
+            self.done += 1
+            if self.done > 50 or (self.done > 12 and INPUT.click_anywhere()):
+                self.close(True)
+            return
+        if INPUT.cancel():
+            self.close(False)
+            return
+        for i, g in enumerate(self.bells):
+            if INPUT.click(self.bell_x(i) - 16, 52, 32, 54):
+                self.swing[i] = 24
+                audio.sfx('bell')
+                self.progress, result = ring(self.progress, g, self.chant)
+                if result == 'solved':
+                    self.done = 1
+                elif result == 'wrong':
+                    self.flash = 25
+                return
+
+    def draw(self) -> None:
+        dim()
+        s = SESSION.state
+        ui.panel(12, 12, W - 24, H - 24, 'paper')
+        for i, ln in enumerate(self.lines):
+            cells, lw = glyphline.layout(s, ln)
+            glyphline.draw_row(s, cells, W // 2 - lw // 2, 16 + i * 26, P.INK, hover=False)
+        pyxel.rect(30, 48, W - 60, 4, P.WOOD)
+        for i, g in enumerate(self.bells):
+            x = self.bell_x(i)
+            off = int(pyxel.sin(self.swing[i] * 30) * self.swing[i] / 6)
+            pyxel.line(x, 52, x + off, 60, P.INK)
+            bx = x + off
+            pyxel.tri(bx - 14, 100, bx + 14, 100, bx, 58, P.OCHRE)
+            pyxel.rect(bx - 12, 70, 25, 30, P.OCHRE)
+            pyxel.elli(bx - 11, 60, 23, 16, P.OCHRE)
+            pyxel.rect(bx - 14, 98, 29, 4, P.WOOD)
+            pyxel.rectb(bx - 12, 70, 25, 30, P.WOOD)
+            glyphline.glyph_box(s, g, bx - 8, 76, 16)
+        for k in range(self.progress):
+            pyxel.circ(W // 2 - len(self.chant) * 6 + k * 12 + 6, 118, 3, P.JADE)
+        for k in range(self.progress, len(self.chant)):
+            pyxel.circb(W // 2 - len(self.chant) * 6 + k * 12 + 6, 118, 3, P.STONE)
+        if self.done:
+            text.center(W // 2, 134, '钟声很好听！', P.JADE)
+        elif self.flash:
+            text.center(W // 2, 134, 'Звон рассыпался. Начните сначала.', P.VERMILION, small=True)
+        else:
+            text.center(W // 2, 134, 'Звоните в колокола в том порядке, что в надписи.', P.STONE, small=True)

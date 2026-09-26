@@ -213,3 +213,109 @@ def play_chapter3(g: HeadlessGame, climb: bool = False) -> None:
     assert s.on('ranger_ok')
     if climb:
         assert g.exit('up')
+
+
+def play_chapter4(g: HeadlessGame, climb: bool = False) -> None:
+    """The market street, the teahouse, the Red Gate, the tower of immortals."""
+    s = g.state
+    assert s.scene == '4a' and s.chapter == 4
+    g.read('diary_6')
+    g.answer('不是').talk('porter')
+    assert s.on('porter_met')
+    g.answer('腿疼').talk('pharmacist')
+    assert s.on('med_order')
+    g.use('money', 'pharmacist')
+    assert 'medicine' in s.inventory
+    had_suitcase = 'suitcase' in s.inventory
+    g.plan('cargo', True).answer('中天门')
+    g.use('medicine', 'porter')
+    assert s.on('cargo_done') and s.on('porter_gone')
+    assert not had_suitcase or 'suitcase' not in s.inventory
+    g.answer('一个').talk('pancake')
+    g.use('money', 'pancake')
+    assert 'pancake' in s.inventory
+    g.answer('太贵了').talk('seller')
+    g.answer('四十').talk('seller')
+    g.use('money', 'seller')
+    assert 'stick' in s.inventory
+    assert g.exit('teahouse') and s.scene == '4b'
+    g.click('tv4')
+    g.plan('tray', True).answer('茶', '能').talk('hostess')
+    assert s.on('tray_done') and 'diary_7' in s.texts
+    g.read('diary_7')
+    g.answer('鸟').talk('storyteller')
+    g.answer('飞').talk('storyteller')
+    assert 'diary_8' in s.texts
+    g.read('diary_8')
+    for _ in range(4):
+        g.talk('manager')
+    for _ in range(3):
+        g.talk('bride')
+        g.talk('student4')
+    g.answer('好').talk('groom')
+    assert g.exit('door') and s.scene == '4a'
+    assert g.exit('gate') and s.scene == '4c'
+    assert not g.exit('up')
+    g.answer('不是').talk('ticket')
+    g.use('money', 'ticket')
+    assert 'gate_ticket' in s.inventory
+    g.use('gate_ticket', 'guard')
+    assert s.on('redgate_ok')
+    for _ in range(3):
+        g.talk('guide')
+    assert g.exit('tower') and s.scene == '4d'
+    g.answer('虫二').talk('scholar')
+    g.answer('风月').talk('scholar')
+    assert s.on('chonger_done') and s.confirmed.get('风')
+    assert g.exit('gate') and s.scene == '4c'
+    if climb:
+        assert g.exit('up')
+
+
+def play_chapter5(g: HeadlessGame, climb: bool = False) -> None:
+    """The nunnery's talisman, the stream, the flipped signpost, the Li family teahouse, the bells."""
+    s = g.state
+    assert s.scene == '5a' and s.chapter == 5
+    g.talk('pilgrim5')
+    assert not g.exit('valley')
+    g.plan('talisman', '门开').click('talisman')
+    assert s.on('doumu_open')
+    g.answer('李明').talk('nun')
+    assert s.on('nun_met')
+    g.use('lamp', 'nun')
+    assert s.on('nun_done') and 'fu' in s.inventory
+    g.click('burner')
+    assert g.exit('valley') and s.scene == '5b'
+    g.click('rock')
+    for _ in range(4):
+        g.talk('calligrapher')
+    g.talk('student5')
+    assert not g.exit('ridge')
+    g.plan('talisman', '水小').click('stone')
+    assert s.on('stream_low')
+    assert g.exit('ridge') and s.scene == '5c'
+    g.read('diary_9')
+    g.answer('不要').talk('horseman')
+    g.talk('horseman')
+    g.talk('lost')
+    g.plan('talisman', '中天门上红门下').click('signpost')
+    assert s.on('signpost_fixed')
+    g.talk('lost')
+    g.click('horse')
+    assert g.exit('top') and s.scene == '5d'
+    g.read('diary_10')
+    assert not g.exit('up')
+    g.answer('我是俄罗斯人').talk('xiaoyue')
+    g.use('letter', 'xiaoyue')
+    assert s.on('letter_read') and 'diary_11' in s.texts
+    g.read('diary_11')
+    g.talk('zhao')
+    g.plan('bells', True).talk('monk')
+    assert s.on('bells_done') and 'coat' in s.inventory
+    for _ in range(3):
+        g.talk('father5')
+        g.talk('kid5')
+    g.click('cablecar')
+    g.talk('xiaoyue')
+    if climb:
+        assert g.exit('up')

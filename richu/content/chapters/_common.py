@@ -54,3 +54,19 @@ def fig(coat: int, trim: int | None = None, style: str = 'jacket', hat: str = 's
 # frequently used people
 OFFICER = fig(P.NAVY, P.GOLD, 'uniform', 'police')
 STAFF = fig(P.DARK_BLUE, P.WHITE, 'uniform', 'bun', hair=P.INK)
+
+
+async def edit_talisman(c: ScriptContext, talisman_id: str) -> str | None:
+    """Opens an acting inscription in the brush editor. Returns the outcome of the new text, if any."""
+    from ...core import talisman as TL
+
+    t = TL.TALISMANS[talisman_id]
+    if not c.flag('brush_awake'):
+        await c.narrate('Надпись будто светится изнутри. Чтобы её изменить, нужна кисть, которая умеет писать.')
+        return None
+    new = await c.puzzle('talisman', talisman=t)
+    if not isinstance(new, str) or new == TL.current(c.state, t):
+        return None
+    c.set(f'tal:{t.id}', new)
+    c.sfx('brush')
+    return t.outcomes.get(new)

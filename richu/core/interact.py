@@ -62,10 +62,20 @@ def find_hotspot(scene: SceneDef, s: GameState, hid: str) -> HotspotDef:
     raise KeyError(f'no visible hotspot {hid} in {scene.id}')
 
 
+def sign_text(sign: SignDef, s: GameState) -> str:
+    """A sign's text; an edited talisman shows its new inscription."""
+    if sign.talisman:
+        from .talisman import text_of
+
+        return text_of(s, sign.talisman, sign.text)
+    return sign.text
+
+
 def see_signs(scene: SceneDef, s: GameState) -> None:
     for sign in visible_signs(scene, s):
-        journal.see(s, sign.text)
-        journal.record_line(s, 'sign', sign.text.replace('\n', ''), scene.id)
+        t = sign_text(sign, s)
+        journal.see(s, t)
+        journal.record_line(s, 'sign', t.replace('\n', ''), scene.id)
 
 
 async def enter_scene(c: 'ScriptContext', scene: SceneDef) -> None:

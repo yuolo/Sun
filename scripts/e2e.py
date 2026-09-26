@@ -150,8 +150,12 @@ class E2E:
             ('pages 1', lambda: pt.solve_open_pages(g, 1)),
             ('chapter 2', lambda: pt.play_chapter2(g, sleep=True)),
             ('pages 2', lambda: pt.solve_open_pages(g, 2)),
-            ('chapter 3', lambda: pt.play_chapter3(g)),
+            ('chapter 3', lambda: pt.play_chapter3(g, climb=True)),
             ('pages 3', lambda: pt.solve_open_pages(g, 3)),
+            ('chapter 4', lambda: pt.play_chapter4(g, climb=True)),
+            ('pages 4', lambda: pt.solve_open_pages(g, 4)),
+            ('chapter 5', lambda: pt.play_chapter5(g)),
+            ('pages 5', lambda: pt.solve_open_pages(g, 5)),
         ]
         for name, play in chapters:
             try:
@@ -223,7 +227,7 @@ class UIGame:
         from richu.core import interact
 
         v = self.view
-        boxes = [v._sign_box(sg)[:4] for sg in interact.visible_signs(v.scene, self.state)]
+        boxes = [v._sign_box(sg)[:4] for sg in interact.visible_signs(v.scene, self.state) if not sg.talisman]
         x, y, w, h = rect
         pts = [(px, py) for px in range(x + 1, x + w - 1, 2) for py in range(y + 1, y + h - 1, 2)]
         pts.sort(key=lambda p: abs(p[0] - x - w / 2) + abs(p[1] - y - h / 2))
