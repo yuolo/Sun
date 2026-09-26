@@ -35,6 +35,7 @@ npm install
 npm run dev        # http://localhost:5173
 npm run build      # статическая сборка в dist/ (~320 КБ)
 npm run preview    # посмотреть сборку
+npm run build:single   # один HTML-файл со всем внутри: dist-single/richu.html (открывается прямо с диска)
 ```
 
 Сборка полностью статическая и открывается с любого пути (`base: './'`). Workflow `.github/workflows/ci.yml` проверяет типы, гоняет тесты и публикует `dist/` на GitHub Pages при пуше в `main` (в настройках репозитория: *Pages → Source: GitHub Actions*).

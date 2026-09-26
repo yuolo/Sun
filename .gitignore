@@ -6,3 +6,4 @@ coverage/
 test-results/
 playwright-report/
 .font-cache/
+dist-single/
