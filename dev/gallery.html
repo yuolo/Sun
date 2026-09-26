@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<title>Галерея сцен</title>
+<style>
+  body { margin: 0; background: #222; color: #eee; font: 14px sans-serif; }
+  .scene { position: relative; width: 1600px; height: 900px; margin: 0 0 12px; }
+  .scene svg { width: 1600px; height: 900px; display: block; }
+  .scene .fig { position: absolute; }
+  h2 { margin: 6px; }
+  .icons { display: flex; flex-wrap: wrap; gap: 6px; background: #f4ead2; padding: 8px; }
+  .icons div { width: 110px; text-align: center; color: #333; }
+  .icons svg { width: 100px; height: 100px; background: #fffaf0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="./gallery.ts"></script>
+</body>
+</html>
