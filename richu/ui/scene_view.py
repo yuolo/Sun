@@ -781,6 +781,7 @@ SIGN_STYLES: dict[str, tuple[int | None, int | None, int]] = {
     'screen': (P.INK, P.STONE, P.GOLD),
     'lit': (P.JADE, P.PINE, P.WHITE),
     'blue': (P.DARK_BLUE, P.WHITE, P.WHITE),
+    'chalk': (P.PINE, P.WOOD, P.WHITE),
 }
 
 

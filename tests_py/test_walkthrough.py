@@ -40,10 +40,15 @@ def test_every_line_uses_known_glyphs():
     from richu.content import lexicon
     from richu.core.phrases import is_han
 
+    from richu.devtools.playthrough import play_chapter3
+
     g = HeadlessGame()
     play_prologue(g)
     play_chapter1(g)
-    play_chapter2(g)
+    solve_open_pages(g, 1)
+    play_chapter2(g, sleep=True)
+    solve_open_pages(g, 2)
+    play_chapter3(g)
     unknown = sorted({ch for line in g.state.log for ch in line.text if is_han(ch) and not lexicon.known(ch)})
     assert not unknown, f'glyphs missing from the lexicon: {"".join(unknown)}'
 
@@ -56,3 +61,19 @@ def test_officer_waits_for_a_real_answer(answers):
     g.answer(*answers)
     g.use('passport', 'officer')
     assert g.state.on('passport_ok') and not g.c.answers
+
+
+def test_chapter3_the_village():
+    from richu.devtools.playthrough import play_chapter3
+
+    g = HeadlessGame()
+    play_prologue(g)
+    play_chapter1(g)
+    solve_open_pages(g, 1)
+    play_chapter2(g, sleep=True)
+    solve_open_pages(g, 2)
+    play_chapter3(g)
+    solved = solve_open_pages(g, 3)
+    missing = [(p.id, [c for c in journal.page_chars(p) if c not in g.state.seen]) for p in PG.PAGES
+               if p.chapter == 3 and p.id not in solved and p.id != 'elements']
+    assert not missing, f'pages still closed after chapter 3: {missing}'

@@ -84,6 +84,9 @@ class HeadlessContext:
 
     async def puzzle(self, kind: str, **params: Any) -> Any:
         self.events.append(f'puzzle:{kind}')
+        # lines the puzzle window shows (a lesson, a riddle) are read by the player
+        for line in params.get('lines') or ():
+            journal.see(self.state, line)
         queue = self.solutions.get(kind)
         if not queue:
             raise AssertionError(f'no planned solution for puzzle {kind} {params}')
@@ -182,6 +185,15 @@ class HeadlessGame:
 
     def plan(self, kind: str, *results: Any) -> 'HeadlessGame':
         self.c.solutions[kind].extend(results)
+        return self
+
+    def read(self, text_id: str) -> 'HeadlessGame':
+        """Opens an unlocked text in the journal and reads it."""
+        from ..content.texts import text
+
+        if text_id not in self.state.texts:
+            raise AssertionError(f'text {text_id} is not unlocked')
+        journal.see(self.state, text(text_id).zh)
         return self
 
     def solve_page(self, page_id: str) -> list[str]:

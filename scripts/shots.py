@@ -75,7 +75,9 @@ def main() -> None:
     pt.play_chapter1(g)
     final = copy.deepcopy(g.state)
     pt.solve_open_pages(g, 1)
-    pt.play_chapter2(g)
+    pt.play_chapter2(g, sleep=True)
+    pt.solve_open_pages(g, 2)
+    pt.play_chapter3(g)
 
     for scene_id, st in states:
         if only is not None and st.chapter != only:
@@ -92,6 +94,27 @@ def main() -> None:
             view.bubbles = [bubbles.Bubble(SESSION.state, '你好！你要去哪儿？', view.rt._anchor(a.id))]
             shot(f'bubble-{scene_id}')
             view.bubbles = []
+
+    if only == 3:
+        from richu.ui.composer import BrushPad
+        from richu.ui.puzzles import FaceGame
+
+        SESSION.state = copy.deepcopy(g.state)  # type: ignore[assignment]
+        view = SceneView()
+        APP.replace_all(view)
+        view.load('3c')
+        game = FaceGame(['头发', '眼睛', '耳朵', '鼻子', '嘴'])
+        APP.push(game)
+        shot('puzzle-face-learn')
+        game.phase, game.step = 'quiz', 1
+        game.done_parts = [game.answers[0]]
+        shot('puzzle-face-quiz')
+        APP.replace_all(view)
+        view.load('3b')
+        APP.push(BrushPad())
+        shot('brush-pad-3b')
+        print(f'{n} screenshots in {out}')
+        return
 
     if only == 2:
         from richu.ui.puzzles import AncientStele

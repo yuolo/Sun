@@ -63,6 +63,9 @@ class GameState:
     def on(self, name: str) -> bool:
         return bool(self.flags.get(name))
 
+    def has(self, item: str) -> bool:
+        return item in self.inventory
+
 
 def to_json(s: GameState) -> dict[str, Any]:
     return asdict(s)

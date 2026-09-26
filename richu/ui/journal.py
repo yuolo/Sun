@@ -583,6 +583,7 @@ class GrammarTab(Tab):
         super().__init__(j)
         self.open: int | None = None
         self.scroll = ui.Scroll(10, TOP + 18, W - 20, BODY_H - 18)
+        self.list_scroll = ui.Scroll(10, TOP + 18, W - 20, BODY_H - 18)
 
     def captures_right(self) -> bool:
         return self.open is not None
@@ -594,8 +595,12 @@ class GrammarTab(Tab):
             if INPUT.right or INPUT.key(pyxel.KEY_BACKSPACE) or INPUT.click(10, TOP + 2, 60, 14):
                 self.open = None
             return
+        self.list_scroll.content = len(notes) * 14
+        self.list_scroll.update()
+        if not INPUT.inside(10, TOP + 18, W - 20, BODY_H - 18):
+            return
         for i, _ in enumerate(notes):
-            if INPUT.click(12, TOP + 18 + i * 14, W - 28, 13):
+            if INPUT.click(12, TOP + 18 + i * 14 - self.list_scroll.offset, W - 28, 13):
                 self.open = i
                 self.scroll.offset = 0
 
@@ -621,11 +626,15 @@ class GrammarTab(Tab):
             self.scroll.draw_bar()
             return
         self.header('Грамматика', f'{len(notes)} из {len(G.GRAMMAR)}')
+        pyxel.clip(8, TOP + 18, W - 16, BODY_H - 18)
         for i, n in enumerate(notes):
-            y = TOP + 18 + i * 14
-            if INPUT.inside(12, y, W - 28, 13):
+            y = TOP + 18 + i * 14 - self.list_scroll.offset
+            if INPUT.inside(12, y, W - 28, 13) and INPUT.inside(8, TOP + 18, W - 16, BODY_H - 18):
                 pyxel.rect(12, y, W - 28, 13, P.LAMP)
             text.draw(18, y, n.title, P.INK)
+        pyxel.clip()
+        self.list_scroll.content = len(notes) * 14
+        self.list_scroll.draw_bar()
         if not notes:
             text.draw(14, TOP + 24, 'Заметки откроются, когда вы поймёте нужные знаки.', P.STONE, small=True)
 

@@ -293,3 +293,129 @@ class AncientStele(Screen):
             text.center(W // 2, 146, 'Верно! Знаки выросли из рисунков.', P.JADE)
         else:
             text.center(W // 2, 146, 'Выберите знак внизу, затем древнюю форму.', P.STONE, small=True)
+
+
+# ---------------------------------------------------------------- the face game
+
+
+FACE_CX, FACE_CY = 112, 100
+
+# the parts of a face drawn on the blackboard, as click rectangles
+FACE_PARTS: dict[str, list[tuple[int, int, int, int]]] = {
+    '头发': [(FACE_CX - 32, FACE_CY - 42, 64, 16)],
+    '眼睛': [(FACE_CX - 20, FACE_CY - 14, 16, 10), (FACE_CX + 4, FACE_CY - 14, 16, 10)],
+    '耳朵': [(FACE_CX - 40, FACE_CY - 10, 10, 22), (FACE_CX + 30, FACE_CY - 10, 10, 22)],
+    '鼻子': [(FACE_CX - 5, FACE_CY - 4, 10, 14)],
+    '嘴': [(FACE_CX - 12, FACE_CY + 13, 24, 9)],
+}
+
+
+def draw_face(x: int, y: int, chalk: int = P.WHITE) -> None:
+    """A chalk face: head, hair, ears, eyes, nose and mouth around (x, y)."""
+    pyxel.circb(x - 35, y + 1, 6, chalk)
+    pyxel.circb(x + 35, y + 1, 6, chalk)
+    pyxel.circ(x, y, 32, P.PINE)
+    pyxel.circb(x, y, 32, chalk)
+    for i in range(-28, 29, 4):
+        pyxel.line(x + i, y - 26 - (28 - abs(i)) // 5, x + i + 2, y - 38 + abs(i) // 3, chalk)
+    for ex in (x - 12, x + 12):
+        pyxel.circb(ex, y - 9, 4, chalk)
+        pyxel.pset(ex, y - 9, chalk)
+    pyxel.line(x, y - 2, x - 3, y + 7, chalk)
+    pyxel.line(x - 3, y + 7, x + 2, y + 7, chalk)
+    for i in range(-9, 10):
+        pyxel.pset(x + i, y + 17 + (81 - i * i) // 30, chalk)
+
+
+@puzzle('face')
+class FaceGame(Screen):
+    """The teacher names the parts of a face, then asks where each one is."""
+
+    def __init__(self, parts: list[str], lines: list[str] | None = None) -> None:
+        super().__init__()
+        from ..core import journal
+
+        self.parts = [p for p in parts if p in FACE_PARTS]
+        self.lines = lines or [f'这是{p}。' for p in self.parts]
+        s = SESSION.state
+        for ln in self.lines:
+            journal.see(s, ln)
+        order = sorted(self.parts, key=lambda p: (ord(p[0]) * 31) % 17)
+        self.questions = [f'{p}在哪儿？' for p in order]
+        self.answers = order
+        for q in self.questions:
+            journal.see(s, q)
+        self.phase = 'learn'
+        self.step = 0
+        self.age = 0
+        self.flash = 0
+        self.wrong: tuple[int, int] | None = None
+        self.done_parts: list[str] = []
+
+    def update(self) -> None:
+        self.age += 1
+        self.flash = max(0, self.flash - 1)
+        if self.phase == 'learn':
+            if (self.age > 12 and INPUT.click_anywhere()) or self.age > 90:
+                self.step += 1
+                self.age = 0
+                if self.step >= len(self.parts):
+                    self.phase, self.step = 'quiz', 0
+            return
+        if self.phase == 'done':
+            if self.age > 40 or (self.age > 10 and INPUT.click_anywhere()):
+                self.close(True)
+            return
+        if INPUT.cancel():
+            self.close(False)
+            return
+        want = self.answers[self.step]
+        for part, rects in FACE_PARTS.items():
+            if part not in self.parts:
+                continue
+            for r in rects:
+                if INPUT.click(*r):
+                    if part == want:
+                        audio.sfx('tap')
+                        self.done_parts.append(part)
+                        self.step += 1
+                        self.age = 0
+                        self.wrong = None
+                        if self.step >= len(self.answers):
+                            self.phase = 'done'
+                            audio.sfx('seal')
+                    else:
+                        self.wrong = (INPUT.mx, INPUT.my)
+                        self.flash = 20
+                    return
+
+    def draw(self) -> None:
+        dim()
+        s = SESSION.state
+        ui.panel(12, 12, W - 24, H - 24, 'paper')
+        # the blackboard with the face
+        pyxel.rect(40, 36, 144, 124, P.PINE)
+        pyxel.rectb(40, 36, 144, 124, P.WOOD)
+        draw_face(FACE_CX, FACE_CY)
+        if self.phase == 'learn':
+            part = self.parts[self.step]
+            for r in FACE_PARTS[part]:
+                pyxel.rectb(r[0] - 1, r[1] - 1, r[2] + 2, r[3] + 2, P.YELLOW)
+            line = self.lines[self.step] if self.step < len(self.lines) else ''
+            cells, lw = glyphline.layout(s, line)
+            glyphline.draw_row(s, cells, 196 + (108 - lw) // 2, 80, P.INK, hover=False)
+            for i, ln in enumerate(text.wrap('Учительница показывает на доску.', 104, small=True)):
+                text.center(250, 128 + i * 11, ln, P.STONE, small=True)
+            return
+        for part in self.done_parts:
+            r = FACE_PARTS[part][0]
+            pyxel.circ(r[0] + r[2] + 4, r[1] + 2, 2, P.JADE)
+        if self.phase == 'done':
+            text.center(250, 80, '你们都很聪明！', P.JADE)
+            return
+        q = self.questions[self.step]
+        cells, lw = glyphline.layout(s, q)
+        glyphline.draw_row(s, cells, 196 + (108 - lw) // 2, 80, P.INK, hover=False)
+        text.center(250, 140, 'Покажите на доске.', P.STONE, small=True)
+        if self.flash and self.wrong:
+            text.draw(self.wrong[0] + 4, self.wrong[1] - 14, '不对！', P.VERMILION)

@@ -140,3 +140,76 @@ def play_chapter2(g: HeadlessGame, sleep: bool = False) -> None:
     g.click('window')
     if sleep:
         g.click('bed')
+
+
+def play_chapter3(g: HeadlessGame, climb: bool = False) -> None:
+    """The bridge, the village, the school, the arch of Daizong."""
+    s = g.state
+    assert s.scene == '3a' and s.chapter == 3
+    assert 'diary_3' in s.texts
+    g.read('diary_3')
+    g.click('plaque')
+    g.answer('是', '他是我爷爷').talk('fisher')
+    assert s.on('fisher_story')
+    g.talk('boy')
+    g.answer('能').talk('boy')
+    assert s.on('xl_school')
+    g.click('pencil')
+    assert 'pencil' in s.inventory
+    g.answer('七条').talk('fisher')
+    assert 'bucket' in s.inventory
+    g.click('catch')
+    assert g.use('bucket', 'river') and 'water' in s.inventory
+    assert g.exit('village') and s.scene == '3b'
+    g.answer('能').talk('aunt')
+    assert s.on('aunt_asked')
+    g.answer('我是俄罗斯人').talk('grandma')
+    assert s.on('grandma_met')
+    assert g.use('water', 'grandma') and s.on('gw_water')
+    g.talk('aunt')
+    assert 'firewood' in s.inventory
+    assert g.use('firewood', 'grandma') and s.on('need_fire')
+    g.answer('没有').talk('son')
+    g.talk('son')
+    g.talk('son')
+    g.talk('son')
+    g.talk('mother')
+    g.click('tree')
+    assert not g.exit('road')
+    assert g.exit('school') and s.scene == '3c'
+    g.answer('不是', '我是俄罗斯人').talk('teacher')
+    g.talk('teacher')
+    assert s.on('lesson1')
+    g.answer('六十', '七天').talk('teacher')
+    assert s.on('math_done')
+    g.plan('face', True).talk('teacher')
+    assert s.on('face_done')
+    g.answer('红').talk('xiaohong')
+    g.answer('喜欢').talk('pangpang')
+    g.talk('teacher')
+    assert s.on('exam_started')
+    g.use('pencil', 'xiaolong')
+    g.talk('teacher')
+    g.talk('xiaolong')
+    assert 'drawing' in s.inventory
+    g.click('blackboard')
+    assert g.exit('door') and s.scene == '3b'
+    g.solve_page('elements')
+    assert s.confirmed.get('火')
+    g.use('brush', 'stove')
+    assert s.on('brush_awake')
+    g.answer('是')
+    g.cast('火', 'stove')
+    assert s.on('tea_done') and 'lamp' in s.inventory and 'old_photo' in s.inventory
+    assert 'diary_4' in s.texts
+    g.read('diary_4')
+    assert g.exit('road') and s.scene == '3d'
+    assert 'diary_5' in s.texts
+    g.read('diary_5')
+    g.talk('husband')
+    g.answer('往前走').talk('wife')
+    assert s.on('tourists_ok')
+    g.answer('上山').talk('ranger')
+    assert s.on('ranger_ok')
+    if climb:
+        assert g.exit('up')

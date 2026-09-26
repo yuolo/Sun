@@ -148,8 +148,10 @@ class E2E:
             ('prologue', lambda: pt.play_prologue(g)),
             ('chapter 1', lambda: pt.play_chapter1(g)),
             ('pages 1', lambda: pt.solve_open_pages(g, 1)),
-            ('chapter 2', lambda: pt.play_chapter2(g)),
+            ('chapter 2', lambda: pt.play_chapter2(g, sleep=True)),
             ('pages 2', lambda: pt.solve_open_pages(g, 2)),
+            ('chapter 3', lambda: pt.play_chapter3(g)),
+            ('pages 3', lambda: pt.solve_open_pages(g, 3)),
         ]
         for name, play in chapters:
             try:
@@ -297,6 +299,17 @@ class UIGame:
             self.e.d.click(160, 60)
         self._settle()
         return None
+
+    def read(self, text_id: str) -> 'UIGame':
+        from richu.ui.reader import Reader
+
+        self.e.last = f'read {text_id}'
+        assert text_id in self.state.texts, f'text {text_id} is not unlocked'
+        APP.push(Reader(text_id))
+        self.e.d.step(4)
+        self.e.d.key(pyxel.KEY_ESCAPE)
+        self.e.d.step(3)
+        return self
 
     def solve_page(self, page_id: str) -> list[str]:
         from richu.content.pages import page
