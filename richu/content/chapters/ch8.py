@@ -185,6 +185,13 @@ def sun_art(s, look: SceneLook) -> None:
         c.rect(200, 100, 110, 3, P.ORANGE)
         c.rect(220, 97, 70, 3, P.YELLOW)
     kit.cloud_sea(104, 242)
+    # rows of cloud tops going down the valley
+    r = kit.rng(244)
+    for row, y in enumerate((126, 146, 166)):
+        for i in range(12):
+            cx = 180 + i * 14 + r.randint(-3, 3) + (7 if row % 2 else 0)
+            c.circ(cx, y + r.randint(-2, 2), r.randint(6, 9), P.WHITE)
+        kit.drect(180, y + 6, 140, 8, P.MIST, 0.5)
     kit.cliff(0, 120, 190, 60, P.STONE, P.GREY, P.PLUM, seed=243)
     kit.rock(150, 134, 40, 18, P.STONE, P.GREY, P.PLUM)
     kit.railing(0, 150, 126, P.STONE, 10)
@@ -283,8 +290,8 @@ async def sky_spell(c: ScriptContext, spell) -> bool:
     if spell.power != 'full' or not c.flag('letter_given'):
         return False
     if not c.flag('clouds_open') and (spell.is_special('风吹云开') or spell.is_thing('风') or spell.says(noun='云', verb='开')):
-        c.set('clouds_open')
         await c.event('clouds_open')
+        c.set('clouds_open')
         await c.narrate('Ветер поднимается снизу, из долины. Облака расходятся, как занавес. Край неба на востоке розовеет.')
         await c.say('liming', '云开了！你看，东边天上的一角红了！')
         return True
@@ -295,8 +302,8 @@ async def sky_spell(c: ScriptContext, spell) -> bool:
 
 
 async def sunrise(c: ScriptContext) -> None:
-    c.set('sunrise')
     await c.event('sunrise')
+    c.set('sunrise')
     await c.narrate('Из-за края облаков поднимается солнце. Сначала красная полоска, потом полукруг, потом — весь диск.')
     await c.narrate('Равноденствие. День и ночь равны. Над Тайшанем восход.')
     await c.say('liming', '日出了……')

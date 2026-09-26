@@ -435,8 +435,8 @@ async def dragon_spell(c: ScriptContext, spell) -> bool:
     if c.flag('dragon_flew') or spell.power != 'full':
         return False
     if spell.is_special('画龙点睛') or spell.acts('点', '睛'):
-        c.set('dragon_flew')
         await c.event('dragon')
+        c.set('dragon_flew')
         await c.narrate('Кисть ставит две точки. Дракон моргает — и срывается со стены.')
         await c.narrate('Он проносится над храмом, закручивая облака за собой, и уносит их на запад. Небо на востоке чистое.')
         await c.say('tkeeper', '龙飞走了！云也少了！今天能看见日出了！')

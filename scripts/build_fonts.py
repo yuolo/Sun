@@ -151,12 +151,19 @@ def load_fusion(size: int) -> list[TTFont]:
     return [TTFont(f) for f in files]
 
 
-def build_bdf(size: int, chars: str, path: Path) -> list[str]:
+def build_bdf(size: int, chars: str, path: Path, fallback: int | None = None) -> list[str]:
+    """``fallback``: a bigger size whose glyphs stand in for characters this size lacks (radical forms)."""
     fonts = load_fusion(size)
     lookup = {}
     for font in fonts:
         for code, name in font.getBestCmap().items():
             lookup.setdefault(code, (font, name))
+    spare = {}
+    if fallback:
+        for font in load_fusion(fallback):
+            for code, name in font.getBestCmap().items():
+                if code not in lookup:
+                    spare.setdefault(code, (font, name))
     head = fonts[0]
     upm = head['head'].unitsPerEm
     unit = upm / size
@@ -177,6 +184,14 @@ def build_bdf(size: int, chars: str, path: Path) -> list[str]:
     glyphs, missing = [], []
     for ch in chars:
         hit = lookup.get(ord(ch))
+        u, a_, h_, d_ = unit, ascent, height, descent
+        if not hit and ord(ch) in spare:
+            # drawn at the fallback size, sitting on the same baseline
+            hit = spare[ord(ch)]
+            u = hit[0]['head'].unitsPerEm / fallback
+            a_ = math.ceil(top / u)
+            d_ = descent
+            h_ = a_ + d_
         if not hit:
             missing.append(ch)
             continue
@@ -184,9 +199,9 @@ def build_bdf(size: int, chars: str, path: Path) -> list[str]:
         gs = font.getGlyphSet()
         pen = PolygonPen(gs)
         gs[name].draw(pen)
-        adv = round(font['hmtx'][name][0] / unit)
-        rows = rasterize(pen.contours, unit, ascent, max(adv, 1), height)
-        glyphs.append((ch, adv, rows))
+        adv = round(font['hmtx'][name][0] / u)
+        rows = rasterize(pen.contours, u, a_, max(adv, 1), h_)
+        glyphs.append((ch, adv, rows, h_, d_))
     out = [
         'STARTFONT 2.1',
         f'FONT -TakWolf-FusionPixel-Medium-R-Normal--{size}-{size * 10}-75-75-P-{size * 10}-ISO10646-1',
@@ -199,14 +214,14 @@ def build_bdf(size: int, chars: str, path: Path) -> list[str]:
         'ENDPROPERTIES',
         f'CHARS {len(glyphs)}',
     ]
-    for ch, adv, rows in glyphs:
+    for ch, adv, rows, h_, d_ in glyphs:
         w = max(adv, 1)
         out += [
             f'STARTCHAR U+{ord(ch):04X}',
             f'ENCODING {ord(ch)}',
             f'SWIDTH {round(adv * 1000 / size)} 0',
             f'DWIDTH {adv} 0',
-            f'BBX {w} {height} 0 {-descent}',
+            f'BBX {w} {h_} 0 {-d_}',
             'BITMAP',
         ]
         nbytes = (w + 7) // 8
@@ -286,7 +301,7 @@ def main() -> int:
     print(f'{len(chars)} characters, {len(hanzi)} hanzi')
     ok = True
     for size in (12, 10):
-        missing = build_bdf(size, chars, OUT / f'px{size}.bdf')
+        missing = build_bdf(size, chars, OUT / f'px{size}.bdf', fallback=12 if size == 10 else None)
         if missing:
             print(f'px{size}: missing {"".join(missing)}')
             ok = ok and not any(CJK.match(c) for c in missing)

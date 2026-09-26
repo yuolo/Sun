@@ -59,3 +59,24 @@ def test_grammar_notes_use_known_glyphs():
     ids = [g.id for g in grammar.GRAMMAR]
     assert len(ids) == len(set(ids)), 'duplicate grammar ids'
     assert not problems, '\n'.join(problems)
+
+
+def test_lexicon_pinyin_is_a_real_reading():
+    """Each entry's pinyin is one of the character's readings (pypinyin, with neutral tones allowed)."""
+    import pytest
+
+    pypinyin = pytest.importorskip('pypinyin')
+    import unicodedata
+
+    def bare(p: str) -> str:
+        return ''.join(c for c in unicodedata.normalize('NFD', p) if not unicodedata.combining(c)).replace('ü', 'v')
+
+    problems = []
+    for g in lexicon.LEXICON.values():
+        readings = set(pypinyin.pinyin(g.ch, style=pypinyin.Style.TONE, heteronym=True)[0])
+        p = g.pinyin.split(',')[0].split('/')[0].strip()
+        # a neutral tone (le, de, zi…) is a reading of the toned syllable; a toned one must match exactly
+        neutral = bare(p) == p.replace('ü', 'v')
+        if p not in readings and not (neutral and bare(p) in {bare(r) for r in readings}):
+            problems.append(f'{g.ch}: {p} not in {sorted(readings)}')
+    assert not problems, '\n'.join(problems)

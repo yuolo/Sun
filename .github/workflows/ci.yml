@@ -17,19 +17,22 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+          python-version: '3.11'
+          cache: pip
+      - run: pip install "pyxel>=2.9" pytest pypinyin
+      # the story, the puzzles, the content and the fonts, played without a window
+      - run: pytest
+      # the whole game again through the real UI: clicks, bubbles, pads, the ending
+      - run: python scripts/e2e.py
+      # the browser build: build/site/index.html runs on Pyxel's web runtime
+      - run: python scripts/build_web.py
       - name: Upload site
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: build/site
 
   deploy:
     # Enable Pages in the repository settings (Source: GitHub Actions) before the first deploy.

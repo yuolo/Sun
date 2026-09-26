@@ -146,3 +146,33 @@ def test_fonts_cover_every_character_in_the_game():
     from richu.content import lexicon
 
     assert not sorted(set(lexicon.LEXICON) - set(brush)), 'run scripts/build_fonts.py: brush glyphs are out of date'
+
+
+def test_small_font_covers_the_same_characters():
+    """Labels and origins use the 10 px font: it must show everything the 12 px one does."""
+    import os
+    import re
+
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sets = []
+    for f in ('px12.bdf', 'px10.bdf'):
+        bdf = open(os.path.join(root, 'richu', 'assets', 'fonts', f), encoding='ascii').read()
+        sets.append({int(m) for m in re.findall(r'^ENCODING (\d+)$', bdf, re.M)})
+    missing = ''.join(sorted(chr(c) for c in sets[0] - sets[1]))
+    assert not missing, f'px10 lacks {missing}'
+
+
+def test_lexicon_texts_are_printable():
+    """Origins, meanings and example words use only characters the pixel font has."""
+    import os
+    import re
+
+    from richu.content import lexicon
+
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    bdf = open(os.path.join(root, 'richu', 'assets', 'fonts', 'px12.bdf'), encoding='ascii').read()
+    enc = {int(m) for m in re.findall(r'^ENCODING (\d+)$', bdf, re.M)}
+    bad = sorted({ch for g in lexicon.LEXICON.values()
+                  for t in (g.origin, g.meaning, *(w[0] + w[2] for w in g.words))
+                  for ch in t if ord(ch) > 127 and ord(ch) not in enc})
+    assert not bad, f'not in the font: {"".join(bad)}'

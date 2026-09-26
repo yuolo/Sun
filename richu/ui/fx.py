@@ -305,3 +305,106 @@ class Weather:
                 pyxel.line(x, y, x + 1, y - 3, P.PERIWINKLE if s > 1 else P.LIGHT_BLUE)
             else:
                 pyxel.pset(x, y, P.WHITE)
+
+
+# ---------------------------------------------------------------- story events
+
+
+class Fade(Effect):
+    """Darkens the screen and lets it go again (sleep, nightfall)."""
+
+    def __init__(self, col: int = P.NIGHT, frames: int = 60, peak: float = 0.85) -> None:
+        self.col, self.frames, self.peak, self.t = col, frames, peak, 0
+
+    def update(self) -> None:
+        self.t += 1
+        self.done = self.t >= self.frames
+
+    def draw(self) -> None:
+        half = self.frames / 2
+        a = self.peak * (self.t / half if self.t < half else (self.frames - self.t) / half)
+        pyxel.dither(max(0.0, min(1.0, a)))
+        pyxel.rect(0, 0, W, H, self.col)
+        pyxel.dither(1.0)
+
+
+class DragonFlight(Effect):
+    """The painted dragon leaves the wall and flies west, dragging the clouds along."""
+
+    def __init__(self, x: int, y: int, frames: int = 100, cover: tuple[int, int, int, int] | None = None, wall: int = P.LACQUER) -> None:
+        self.x0, self.y0, self.frames, self.t = x, y, frames, 0
+        self.cover, self.wall = cover, wall
+
+    def update(self) -> None:
+        self.t += 1
+        self.done = self.t >= self.frames
+
+    def draw(self) -> None:
+        if self.cover:
+            # the wall where the painting was
+            pyxel.rect(*self.cover, self.wall)
+        k = self.t / self.frames
+        hx = self.x0 - k * (self.x0 + 60)
+        hy = self.y0 - k * 70 - pyxel.sin(self.t * 6) * 6
+        for i in range(16):
+            x = hx + i * 5
+            y = hy + pyxel.sin(self.t * 12 + i * 40) * 4 + i * 1.5 * k
+            pyxel.circ(x, y, 3, P.JADE)
+        pyxel.circ(hx - 3, hy, 5, P.JADE)
+        pyxel.pset(hx - 5, hy - 1, P.INK)
+        pyxel.pset(hx - 2, hy - 1, P.INK)
+        pyxel.dither(0.5)
+        for i in range(5):
+            pyxel.elli(hx + 60 + i * 18, hy - 4 + (i % 2) * 6, 26, 10, P.MIST)
+        pyxel.dither(1.0)
+
+
+class CloudsPart(Effect):
+    """Clouds slide apart from the middle of the eastern sky."""
+
+    def __init__(self, cx: int, y: int, frames: int = 80) -> None:
+        self.cx, self.y, self.frames, self.t = cx, y, frames, 0
+
+    def update(self) -> None:
+        self.t += 1
+        self.done = self.t >= self.frames
+
+    def draw(self) -> None:
+        k = self.t / self.frames
+        for i in range(4):
+            off = 10 + k * (60 + i * 25)
+            y = self.y + i * 8
+            pyxel.elli(self.cx - off - 50, y, 50, 14, P.STONE)
+            pyxel.elli(self.cx + off, y, 50, 14, P.STONE)
+        pyxel.dither(k)
+        pyxel.rect(self.cx - 40, self.y + 26, 80, 3, P.ORANGE)
+        pyxel.dither(1.0)
+
+
+class SunRise(Effect):
+    """The sun comes up over the sea of clouds."""
+
+    def __init__(self, x: int, y_from: int, y_to: int, frames: int = 150) -> None:
+        self.x, self.y0, self.y1, self.frames, self.t = x, y_from, y_to, frames, 0
+
+    def update(self) -> None:
+        self.t += 1
+        self.done = self.t >= self.frames
+
+    def draw(self) -> None:
+        k = min(1.0, self.t / (self.frames * 0.8))
+        y = self.y0 + (self.y1 - self.y0) * k
+        pyxel.dither(0.25 * k)
+        pyxel.circ(self.x, y, 40, P.YELLOW)
+        pyxel.dither(0.5 * k)
+        pyxel.circ(self.x, y, 24, P.LAMP)
+        pyxel.dither(1.0)
+        pyxel.clip(0, 0, W, self.y0 + 2)
+        pyxel.circ(self.x, y, 14, P.ORANGE if k < 0.6 else P.YELLOW)
+        pyxel.circ(self.x, y, 11, P.LAMP)
+        pyxel.clip()
+        if self.t > self.frames * 0.8:
+            f = (self.t - self.frames * 0.8) / (self.frames * 0.2)
+            pyxel.dither(0.6 * (1 - f))
+            pyxel.rect(0, 0, W, H, P.LAMP)
+            pyxel.dither(1.0)

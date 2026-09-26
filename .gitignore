@@ -1,15 +1,13 @@
-node_modules/
-dist/
-*.log
-.DS_Store
-coverage/
-test-results/
-playwright-report/
-.font-cache/
-dist-single/
 __pycache__/
 *.pyc
 .pytest_cache/
-shots/
+.font-cache/
 build/
+shots*/
 *.pyxapp
+*.log
+.DS_Store
+# the old TypeScript build
+node_modules/
+dist/
+dist-single/

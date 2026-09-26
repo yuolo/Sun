@@ -197,6 +197,8 @@ class SettingsScreen(Screen):
             if INPUT.click(40, 40 + i * 18, W - 80, 16):
                 setattr(st, key, not getattr(st, key))
                 SESSION.save_settings()
+                if key == 'music':
+                    audio.refresh()
                 audio.sfx('tap')
         if INPUT.click(W // 2 - 40, H - 30, 80, 16) or INPUT.cancel():
             self.close()
