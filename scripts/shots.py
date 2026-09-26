@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Screenshots of scenes and screens in headless mode, for reviewing the art and UI.
 
-    python scripts/shots.py [out_dir]
+    python scripts/shots.py [out_dir] [--chapter N]
 
 Plays the story headlessly (as the tests do), then shows each visited scene
 and the main windows in the real UI and saves PNGs (×3).
@@ -21,7 +21,14 @@ from richu.engine.driver import Driver  # noqa: E402
 
 
 def main() -> None:
-    out = sys.argv[1] if len(sys.argv) > 1 else 'shots'
+    args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    out = args[0] if args else 'shots'
+    only = None
+    if '--chapter' in sys.argv:
+        only = int(sys.argv[sys.argv.index('--chapter') + 1])
+        args = [a for a in args if a != str(only)]
+        out = args[0] if args else 'shots'
+    out = os.path.abspath(out)  # pyxel resolves relative paths from the script's directory
     os.makedirs(out, exist_ok=True)
     platform.use_memory_storage()
     app.init(headless=True)
@@ -67,8 +74,12 @@ def main() -> None:
     pt.play_prologue(g)
     pt.play_chapter1(g)
     final = copy.deepcopy(g.state)
+    pt.solve_open_pages(g, 1)
+    pt.play_chapter2(g)
 
     for scene_id, st in states:
+        if only is not None and st.chapter != only:
+            continue
         SESSION.state = copy.deepcopy(st)  # type: ignore[assignment]
         view = SceneView()
         APP.replace_all(view)
@@ -81,6 +92,18 @@ def main() -> None:
             view.bubbles = [bubbles.Bubble(SESSION.state, '你好！你要去哪儿？', view.rt._anchor(a.id))]
             shot(f'bubble-{scene_id}')
             view.bubbles = []
+
+    if only == 2:
+        from richu.ui.puzzles import AncientStele
+
+        SESSION.state = copy.deepcopy(g.state)  # type: ignore[assignment]
+        view = SceneView()
+        APP.replace_all(view)
+        view.load('2e')
+        APP.push(AncientStele('日月山水人'))
+        shot('puzzle-ancient')
+        print(f'{n} screenshots in {out}')
+        return
 
     SESSION.state = final  # type: ignore[assignment]
     SESSION.state.guesses.update({'你': 'ты', '好': 'хорошо', '我': 'я', '是': 'быть', '人': 'человек', '火': 'огонь', '车': 'повозка'})

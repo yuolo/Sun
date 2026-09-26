@@ -8,7 +8,7 @@ from richu.content import pages as PG
 from richu.content.world import load
 from richu.core import journal
 from richu.core.headless import HeadlessGame
-from richu.devtools.playthrough import play_chapter1, play_prologue, solve_open_pages
+from richu.devtools.playthrough import play_chapter1, play_chapter2, play_prologue, solve_open_pages
 
 platform.use_memory_storage()
 load()
@@ -24,6 +24,17 @@ def test_prologue_and_chapter1():
     assert sum(1 for v in g.state.confirmed.values() if v) >= 90
 
 
+def test_chapter2_the_city():
+    g = HeadlessGame()
+    play_prologue(g)
+    play_chapter1(g)
+    solve_open_pages(g, 1)
+    play_chapter2(g)
+    solved = solve_open_pages(g, 2)
+    missing = [(p.id, [c for c in journal.page_chars(p) if c not in g.state.seen]) for p in PG.PAGES if p.chapter == 2 and p.id not in solved]
+    assert not missing, f'pages still closed after chapter 2: {missing}'
+
+
 def test_every_line_uses_known_glyphs():
     """Every hanzi the player can meet is in the lexicon (checked on a full run's log)."""
     from richu.content import lexicon
@@ -32,6 +43,7 @@ def test_every_line_uses_known_glyphs():
     g = HeadlessGame()
     play_prologue(g)
     play_chapter1(g)
+    play_chapter2(g)
     unknown = sorted({ch for line in g.state.log for ch in line.text if is_han(ch) and not lexicon.known(ch)})
     assert not unknown, f'glyphs missing from the lexicon: {"".join(unknown)}'
 

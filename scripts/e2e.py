@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 import sys
 import time
+from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -35,6 +36,7 @@ class E2E:
         self.d = Driver()
         self.errors: list[str] = []
         self.n = 0
+        self.last = ''  # the player's last action, for error messages
 
     # ---------------------------------------------------------------- helpers
 
@@ -61,13 +63,19 @@ class E2E:
         if not cond:
             self.errors.append(msg)
 
-    def settle(self, max_frames: int = 3000, answers: list[str] | None = None) -> str:
-        """Advances dialogue and closes cards until the scene waits for the player."""
+    def settle(self, max_frames: int = 3000, answers: list[str] | None = None, plans: dict[str, list] | None = None) -> str:
+        """Advances dialogue and closes cards until the scene waits for the player.
+
+        ``answers`` is consumed in place (a queue shared across calls, like
+        HeadlessGame.answer), and so are the planned puzzle results in ``plans``.
+        """
         from richu.ui.composer import AnswerPad
         from richu.ui.menus import ChapterCard
+        from richu.ui.puzzles import PUZZLES
         from richu.ui.reader import Reader
 
-        answers = list(answers or [])
+        kinds = {cls: kind for kind, cls in PUZZLES.items()}
+        answers = answers if answers is not None else []
         idle = 0
         for _ in range(max_frames):
             top = APP.top
@@ -88,6 +96,17 @@ class E2E:
                 self.type_answer(top, answers.pop(0))
                 idle = 0
                 continue
+            if type(top) in kinds:
+                kind = kinds[type(top)]
+                queue = (plans or {}).get(kind)
+                self.d.step(4)
+                if not queue:
+                    self.errors.append(f'no planned result for puzzle {kind}')
+                    top.close(None)
+                else:
+                    top.close(queue.pop(0))
+                idle = 0
+                continue
             if v is not None and top is v:
                 if v.bubbles or v.narration:
                     self.d.step(8)
@@ -98,7 +117,12 @@ class E2E:
                     idle += 1
                     if idle > 3:
                         return 'idle'
+            elif v is not None and top is not v and not isinstance(top, AnswerPad):
+                self.errors.append(f'unexpected screen {type(top).__name__} in {self.s.scene} after {self.last}')
+                top.close(None)
+                continue
             self.d.step(1)
+        self.errors.append(f'timeout in {self.s.scene} after {self.last}')
         return 'timeout'
 
     def type_answer(self, pad, answer: str) -> None:
@@ -108,97 +132,33 @@ class E2E:
             self.d.click(pad.palette.x + 4, pad.palette.y + 4)
         pad.palette.filter.value = ''
         self.d.step(1)
+        typed = ''.join(pad.slots)
+        if typed != answer:
+            self.errors.append(f'could not type {answer!r} (got {typed!r}) in {self.s.scene}')
         self.d.click(pad.btn_ok.x + 4, pad.btn_ok.y + 4)
-
-    def click_actor(self, actor_id: str, answers: list[str] | None = None) -> str:
-        m = self.view.actors[actor_id]
-        self.d.click(int(m.x), int(m.y) - 12)
-        return self.settle(answers=answers)
-
-    def click_hotspot(self, hid: str, answers: list[str] | None = None) -> str:
-        h = next(h for h in self.view.scene.hotspots if h.id == hid)
-        x, y, w, hh = h.rect
-        self.d.click(x + w // 2, y + hh // 2)
-        return self.settle(answers=answers)
-
-    def click_exit(self, eid: str) -> str:
-        e = next(e for e in self.view.scene.exits if e.id == eid)
-        x, y, w, h = e.rect
-        self.d.click(x + w // 2, y + h // 2)
-        return self.settle()
-
-    def use_item(self, item: str, actor: str | None = None, hotspot: str | None = None, answers: list[str] | None = None) -> str:
-        i = self.s.inventory.index(item)
-        self.d.move(160, 176)
-        self.d.step(10)
-        self.d.click(4 + i * 19 + 8, 180 - 10)
-        self.d.step(2)
-        if self.view.mode != 'item' or self.view.item != item:
-            self.errors.append(f'could not select {item}')
-        if actor:
-            m = self.view.actors[actor]
-            self.d.click(int(m.x), int(m.y) - 12)
-        else:
-            h = next(h for h in self.view.scene.hotspots if h.id == hotspot)
-            x, y, w, hh = h.rect
-            self.d.click(x + w // 2, y + hh // 2)
-        return self.settle(answers=answers)
 
     # ---------------------------------------------------------------- the story
 
     def run(self) -> int:
-        from richu.ui.menus import TitleScreen
+        from richu.devtools import playthrough as pt
 
         t0 = time.time()
-        APP.replace_all(TitleScreen())
-        self.d.step(5)
-        title = APP.top
-        new = next(b for b in title.buttons if b.label == 'Новая игра')
-        self.d.click(new.x + 5, new.y + 5)
-        self.settle()
-        self.check(self.view is not None and self.s.scene == '0a', 'new game starts in grandfather\'s room')
-        self.shot('prologue')
-        self.click_hotspot('box')
-        self.check('brush' in self.s.inventory, 'the box gives the brush, diary, photo and letter')
-        self.click_hotspot('photo_wall')
-        self.click_exit('door')
-        self.check(self.s.scene == '1a', 'the door leads to the airport')
-        self.shot('airport')
-
-        self.click_actor('officer')
-        self.use_item('passport', actor='officer', answers=['是'])
-        self.check(self.s.on('passport_ok'), 'passport control passed')
-        self.click_hotspot('black')
-        self.click_hotspot('red')
-        self.check('suitcase' in self.s.inventory, 'got the red suitcase')
-        self.click_exit('out')
-        self.check(self.s.scene == '1b', 'arrived at the station')
-        self.shot('station')
-
-        self.click_actor('clerk', answers=['泰山'])
-        self.use_item('money', actor='clerk')
-        self.check('ticket' in self.s.inventory, 'bought a ticket')
-        self.click_actor('waitress', answers=['面包'])
-        self.use_item('money', actor='waitress')
-        self.click_actor('kid', answers=['我是俄罗斯人'])
-        self.click_actor('kid')
-        self.use_item('bread', actor='kid')
-        self.check('apple' in self.s.inventory, 'the granny gave an apple')
-        self.use_item('ticket', actor='gatekeeper')
-        self.click_exit('platform')
-        self.check(self.s.scene == '1c', 'on the train')
-        self.click_hotspot('seat8')
-        self.check(self.s.on('seated'), 'found seat 8')
-        self.click_actor('student', answers=['我是俄罗斯人'])
-        self.click_actor('student', answers=['是'])
-        self.click_actor('student', answers=['小安'])
-        self.click_actor('student')
-        self.use_item('diary', actor='student')
-        self.check('diary_1' in self.s.texts, 'the student read the diary')
-        for _ in range(4):
-            self.click_actor('student')
-        self.check(self.s.on('arrived'), 'arrived in Tai\'an')
-        self.shot('train')
+        g = UIGame(self)
+        chapters = [
+            ('prologue', lambda: pt.play_prologue(g)),
+            ('chapter 1', lambda: pt.play_chapter1(g)),
+            ('pages 1', lambda: pt.solve_open_pages(g, 1)),
+            ('chapter 2', lambda: pt.play_chapter2(g)),
+            ('pages 2', lambda: pt.solve_open_pages(g, 2)),
+        ]
+        for name, play in chapters:
+            try:
+                play()
+                self.check(True, f'{name} (now in {self.s.scene})')
+            except AssertionError as e:
+                self.check(False, f'{name}: {e} (in {self.s.scene})')
+                break
+            self.shot(name.replace(' ', ''))
         # the journal opens and closes
         self.d.key(pyxel.KEY_J)
         self.d.step(3)
@@ -210,6 +170,144 @@ class E2E:
         for e in self.errors:
             print('  ', e)
         return 1 if self.errors else 0
+
+
+class UIGame:
+    """HeadlessGame's API on top of the real UI, so the e2e run replays
+    ``richu.devtools.playthrough`` with clicks, bubbles and pads."""
+
+    def __init__(self, e: E2E) -> None:
+        self.e = e
+        self.answers: list[str] = []
+        self.plans: dict[str, list] = defaultdict(list)
+
+    @property
+    def state(self):
+        return self.e.s
+
+    @property
+    def view(self):
+        return self.e.view
+
+    def _settle(self) -> str:
+        return self.e.settle(answers=self.answers, plans=self.plans)
+
+    def start(self, scene: str = '0a', entry: str = 'start') -> 'UIGame':
+        from richu.ui.menus import TitleScreen
+
+        APP.replace_all(TitleScreen())
+        self.e.d.step(5)
+        new = next(b for b in APP.top.buttons if b.label == 'Новая игра')
+        self.e.d.click(new.x + 5, new.y + 5)
+        self._settle()
+        assert self.state.scene == scene, f'new game starts in {self.state.scene}'
+        return self
+
+    def talk(self, actor: str) -> 'UIGame':
+        self.e.last = f'talk {actor}'
+        m = self.view.actors.get(actor)
+        assert m is not None, f'no actor {actor} in {self.state.scene}'
+        self.e.d.click(int(m.x), int(m.y) - 12)
+        self._settle()
+        return self
+
+    def _click_hotspot(self, hid: str) -> None:
+        h = next((h for h in self.view.scene.hotspots if h.id == hid), None)
+        assert h is not None, f'no hotspot {hid} in {self.state.scene}'
+        self.e.d.click(*self._free_point(h.rect))
+
+    def _free_point(self, rect: tuple[int, int, int, int]) -> tuple[int, int]:
+        """A point of ``rect`` not covered by a sign, nearest to its centre."""
+        from richu.core import interact
+
+        v = self.view
+        boxes = [v._sign_box(sg)[:4] for sg in interact.visible_signs(v.scene, self.state)]
+        x, y, w, h = rect
+        pts = [(px, py) for px in range(x + 1, x + w - 1, 2) for py in range(y + 1, y + h - 1, 2)]
+        pts.sort(key=lambda p: abs(p[0] - x - w / 2) + abs(p[1] - y - h / 2))
+        for px, py in pts:
+            if not any(bx <= px < bx + bw and by <= py < by + bh for bx, by, bw, bh in boxes):
+                return px, py
+        self.e.errors.append(f'{rect} is covered by signs in {self.state.scene}')
+        return x + w // 2, y + h // 2
+
+    def click(self, hotspot: str) -> 'UIGame':
+        self.e.last = f'click {hotspot}'
+        self._click_hotspot(hotspot)
+        self._settle()
+        return self
+
+    def use(self, item: str, target: str) -> bool:
+        self.e.last = f'use {item} on {target}'
+        i = self.state.inventory.index(item)
+        self.e.d.move(160, 176)
+        self.e.d.step(10)
+        self.e.d.click(4 + i * 19 + 8, 180 - 10)
+        self.e.d.step(2)
+        if self.view.mode != 'item' or self.view.item != item:
+            self.e.errors.append(f'could not select {item}')
+        if target in self.view.actors:
+            m = self.view.actors[target]
+            self.e.d.click(int(m.x), int(m.y) - 12)
+        else:
+            self._click_hotspot(target)
+        self._settle()
+        return True
+
+    def exit(self, exit_id: str) -> bool:
+        self.e.last = f'exit {exit_id}'
+        before = self.state.scene
+        e = next((e for e in self.view.scene.exits if e.id == exit_id), None)
+        assert e is not None, f'no exit {exit_id} in {before}'
+        x, y, w, h = e.rect
+        self.e.d.click(x + w // 2, y + h // 2)
+        self._settle()
+        return self.state.scene != before
+
+    def answer(self, *answers: str) -> 'UIGame':
+        self.answers.extend(answers)
+        return self
+
+    def plan(self, kind: str, *results) -> 'UIGame':
+        self.plans[kind].extend(results)
+        return self
+
+    def cast(self, text_: str, target: str | None = None):
+        from richu.ui.composer import BrushPad
+
+        self.e.d.key(pyxel.KEY_B)
+        self.e.d.step(3)
+        pad = APP.top
+        assert isinstance(pad, BrushPad), 'the brush does not open'
+        for ch in text_:
+            pad.palette.filter.value = ch
+            self.e.d.step(1)
+            self.e.d.click(pad.palette.x + 4, pad.palette.y + 4)
+        pad.palette.filter.value = ''
+        self.e.d.step(1)
+        assert ''.join(pad.slots) == text_, f'could not write {text_}'
+        self.e.d.click(pad.btn_ok.x + 4, pad.btn_ok.y + 4)
+        self.e.d.step(3)
+        if target in self.view.actors:
+            m = self.view.actors[target]
+            self.e.d.click(int(m.x), int(m.y) - 12)
+        elif target:
+            self._click_hotspot(target)
+        else:
+            self.e.d.click(160, 60)
+        self._settle()
+        return None
+
+    def solve_page(self, page_id: str) -> list[str]:
+        from richu.content.pages import page
+        from richu.core import journal
+
+        p = page(page_id)
+        for i, gl in enumerate(p.glyphs):
+            journal.place(self.state, p, i, gl)
+        ok, fresh = journal.submit_page(self.state, p)
+        assert ok, f'page {page_id} rejected'
+        return fresh
 
 
 if __name__ == '__main__':

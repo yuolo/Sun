@@ -43,7 +43,8 @@ class GlyphPalette:
                 if s.confirmed.get(g) and d and (q in d.pinyin or q in d.meaning.lower()):
                     return True
                 return g == q
-            gs = [g for g in gs if hit(g)]
+            # the glyph itself first, then glyphs whose note or meaning mentions it
+            gs = sorted((g for g in gs if hit(g)), key=lambda g: g != q)
         return gs
 
     @property

@@ -179,3 +179,117 @@ class Choose(Screen):
                 glyphline.draw_row(s, cells, x + (w - lw) // 2, y + (38 if opt.get('icon') else 20), P.INK, hover=False)
             if opt.get('ru'):
                 text.center(x + w // 2, y + h - 12, opt['ru'], P.STONE, small=True)
+
+
+# ---------------------------------------------------------------- ancient forms
+
+ANCIENT: dict[str, list[tuple]] = {
+    # oracle-bone-like forms drawn with lines and circles on a 28×28 box
+    '日': [('circ', 14, 14, 10), ('dot', 14, 14)],
+    '月': [('arc', 14, 14, 11), ('line', 10, 12, 16, 12)],
+    '山': [('line', 3, 24, 25, 24), ('line', 3, 24, 3, 12), ('line', 14, 24, 14, 4), ('line', 25, 24, 25, 12)],
+    '水': [('wave', 14, 3, 14, 25), ('line', 6, 8, 9, 12), ('line', 6, 18, 9, 22), ('line', 22, 8, 19, 12), ('line', 22, 18, 19, 22)],
+    '人': [('line', 16, 3, 10, 25), ('line', 14, 11, 20, 21)],
+    '火': [('line', 14, 4, 14, 24), ('line', 6, 10, 9, 22), ('line', 22, 10, 19, 22), ('line', 5, 24, 23, 24)],
+    '木': [('line', 14, 3, 14, 25), ('line', 6, 6, 14, 12), ('line', 22, 6, 14, 12), ('line', 6, 24, 14, 18), ('line', 22, 24, 14, 18)],
+    '门': [('line', 5, 4, 5, 25), ('line', 23, 4, 23, 25), ('line', 5, 4, 11, 4), ('line', 17, 4, 23, 4), ('line', 11, 4, 11, 22), ('line', 17, 4, 17, 22)],
+}
+
+
+def draw_ancient(g: str, x: int, y: int, col: int = P.INK) -> None:
+    for op in ANCIENT.get(g, []):
+        kind = op[0]
+        if kind == 'circ':
+            pyxel.circb(x + op[1], y + op[2], op[3], col)
+        elif kind == 'dot':
+            pyxel.circ(x + op[1], y + op[2], 1, col)
+        elif kind == 'line':
+            pyxel.line(x + op[1], y + op[2], x + op[3], y + op[4], col)
+        elif kind == 'arc':
+            # a crescent: the outer circle minus a shifted inner one
+            cx, cy, r = x + op[1], y + op[2], op[3]
+            ix, iy = cx + 5, cy - 2
+            for deg in range(0, 360, 3):
+                px, py = cx + r * pyxel.cos(deg), cy + r * pyxel.sin(deg)
+                if (px - ix) ** 2 + (py - iy) ** 2 > (r - 1) ** 2:
+                    pyxel.pset(round(px), round(py), col)
+                qx, qy = ix + (r - 1) * pyxel.cos(deg), iy + (r - 1) * pyxel.sin(deg)
+                if (qx - cx) ** 2 + (qy - cy) ** 2 < r * r:
+                    pyxel.pset(round(qx), round(qy), col)
+        elif kind == 'wave':
+            for i in range(op[4] - op[2]):
+                pyxel.pset(x + op[1] + round(pyxel.sin(i * 40) * 2), y + op[2] + i, col)
+
+
+@puzzle('ancient')
+class AncientStele(Screen):
+    """Match ancient forms carved on a stele with the modern glyphs."""
+
+    def __init__(self, glyphs: str) -> None:
+        super().__init__()
+        self.glyphs = [g for g in glyphs if g in ANCIENT]
+        order = sorted(self.glyphs, key=lambda g: (ord(g) * 7919) % 101)
+        self.pool = order
+        self.pairs: dict[str, str | None] = {g: None for g in self.glyphs}
+        self.sel: str | None = None
+        self.done = 0
+
+    def cells(self) -> list[tuple[str, int, int]]:
+        n = len(self.glyphs)
+        x0 = W // 2 - n * 22
+        return [(g, x0 + i * 44 + 6, 44) for i, g in enumerate(self.glyphs)]
+
+    def update(self) -> None:
+        if self.done:
+            self.done += 1
+            if self.done > 40 or INPUT.click_anywhere():
+                self.close(True)
+            return
+        n = len(self.pool)
+        px0 = W // 2 - n * 11
+        for i, g in enumerate(self.pool):
+            if INPUT.click(px0 + i * 22, 118, 20, 20):
+                self.sel = g
+                audio.sfx('tap')
+                return
+        for g, x, y in self.cells():
+            if INPUT.click(x, y, 32, 60) and self.sel:
+                for k, v in self.pairs.items():
+                    if v == self.sel:
+                        self.pairs[k] = None
+                self.pairs[g] = self.sel
+                self.sel = None
+                from ..core.puzzles import check_ancient
+
+                if check_ancient(self.pairs, ''.join(self.glyphs)):
+                    self.done = 1
+                    audio.sfx('seal')
+                return
+        if INPUT.cancel():
+            self.close(False)
+
+    def draw(self) -> None:
+        dim()
+        ui.panel(16, 16, W - 32, H - 30, 'paper')
+        text.center(W // 2, 20, 'Древние знаки на стеле. Какой знак стал каким?', P.STONE, small=True)
+        s = SESSION.state
+        for g, x, y in self.cells():
+            pyxel.rect(x, y, 32, 32, P.GREY)
+            pyxel.rectb(x, y, 32, 32, P.STONE)
+            draw_ancient(g, x + 2, y + 2, P.INK)
+            pyxel.rect(x + 6, y + 38, 20, 20, P.WHITE)
+            pyxel.rectb(x + 6, y + 38, 20, 20, P.INK)
+            if self.pairs[g]:
+                text.draw(x + 10, y + 41, self.pairs[g], P.INK)
+        n = len(self.pool)
+        px0 = W // 2 - n * 11
+        for i, g in enumerate(self.pool):
+            used = g in self.pairs.values()
+            if used:
+                pyxel.dither(0.35)
+            glyphline.glyph_box(s, g, px0 + i * 22, 118, 20, selected=self.sel == g)
+            pyxel.dither(1.0)
+        if self.done:
+            text.center(W // 2, 146, 'Верно! Знаки выросли из рисунков.', P.JADE)
+        else:
+            text.center(W // 2, 146, 'Выберите знак внизу, затем древнюю форму.', P.STONE, small=True)

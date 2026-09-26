@@ -342,8 +342,11 @@ class SceneView(Screen):
 
     def _pointer(self) -> None:
         self.tooltip = ''
-        sign_glyph = self._sign_hover()
         hit = self._hit()
+        # people and ways out come before signs: a sign under them isn't clickable
+        sign_glyph = None if hit and hit[0] in ('actor', 'exit') else self._sign_hover()
+        if sign_glyph is None:
+            self.hover_glyph = None
         if hit:
             self.tooltip = hit[2]
         if sign_glyph and INPUT.click(0, 0, W, H):

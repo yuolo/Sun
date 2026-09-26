@@ -43,7 +43,7 @@ texts.add(
 pages.add(
     PageDef('greet', 'Приветствия', 1, ('你好', '谢谢', '再见', '请')),
     PageDef('who', 'Кто я', 1, ('我', '人', '中国', '俄罗斯', '外')),
-    PageDef('airport', 'В аэропорту', 1, ('护照', '行李箱', '手机', '飞机', '洗手间'), kind='icon'),
+    PageDef('airport', 'В аэропорту', 1, ('护照', '行李箱', '手机', '飞机', '洗手间', '机场'), kind='icon'),
     PageDef('this', 'Это моё', 1, ('这', '是', '的', '不', '在'), kind='phrase',
             phrases=('这是我的！', '你是俄罗斯人吗？', '不是你的！', '我不会说中文。', '出口在那儿。')),
     PageDef('num1', 'Счёт I', 1, ('一', '二', '三', '四', '五')),
@@ -64,7 +64,7 @@ pages.add(
 )
 
 for w, ic in (('护照', 'passport'), ('行李箱', 'suitcase'), ('手机', 'phone'), ('飞机', 'plane'), ('洗手间', 'wc'), ('咖啡', 'coffee'),
-              ('茶', 'tea'), ('牛奶', 'milk'), ('面包', 'bread'), ('苹果', 'apple'), ('水', 'water_glass'), ('火车', 'train'), ('票', 'ticket')):
+              ('机场', 'plane'), ('茶', 'tea'), ('牛奶', 'milk'), ('面包', 'bread'), ('苹果', 'apple'), ('水', 'water_glass'), ('火车', 'train'), ('票', 'ticket')):
     icon_for(w, ic)
 
 
@@ -612,6 +612,7 @@ register(
         ],
         signs=[
             SignDef('welcome', '欢迎', 130, 14, 'banner'),
+            SignDef('airport', '机场', 6, 14, 'blue'),
             SignDef('foreign', '外国人', 43, 76, 'blue'),
             SignDef('wc', '洗手间', 100, 80, 'blue'),
             SignDef('exit', '出口', 280, 60, 'lit'),
