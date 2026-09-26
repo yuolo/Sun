@@ -203,6 +203,8 @@ export interface SceneDef {
   hotspots: HotspotDef[];
   signs: SignDef[];
   exits: ExitDef[];
+  /** Perspective: actors shrink towards [yFar, scaleAtFar] (scale 1 at the front path). */
+  depth?: [number, number];
   /** Named points for pointing gestures: event 'point-<name>'. */
   marks?: Record<string, [number, number]>;
   onEnter?: Script;

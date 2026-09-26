@@ -414,7 +414,8 @@ export function gateTower(p: Palette, cx: number, y: number, o: { open: boolean;
   parts.push(path(arch, { fill: darken(p.stone, 0.35) }));
   if (o.open) {
     parts.push(path(`M${tx + 14} ${y} V${ty + tw / 2 + 6} A${tw / 2 - 14} ${tw / 2 - 14} 0 0 1 ${tx + tw - 14} ${ty + tw / 2 + 6} V${y} Z`, { fill: '#1a1622' }));
-    parts.push(ellipse(cx, y - 60, tw * 0.4, 110, { fill: '#ffcf8a', opacity: 0.35 }));
+    parts.push(path(`M${cx - 46} ${y} V${y - 120} A46 46 0 0 1 ${cx + 46} ${y - 120} V${y} Z`, { fill: '#f6c883', opacity: 0.75 }));
+    parts.push(path(`M${cx - 46} ${y} L${cx - 110} ${y} L${cx - 70} ${y - 6} L${cx + 70} ${y - 6} L${cx + 110} ${y} Z`, { fill: '#f6c883', opacity: 0.35 }));
     parts.push(rect(tx + 4, ty + tw / 2, 16, th - tw / 2, { fill: p.red }), rect(tx + tw - 20, ty + tw / 2, 16, th - tw / 2, { fill: p.red }));
   } else {
     const inner = `M${tx + 14} ${y} V${ty + tw / 2 + 6} A${tw / 2 - 14} ${tw / 2 - 14} 0 0 1 ${tx + tw - 14} ${ty + tw / 2 + 6} V${y} Z`;

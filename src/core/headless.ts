@@ -1,6 +1,7 @@
 import { sceneById } from '../content/world';
 import { enterScene, recordLine, takeExit, talkTo, clickHotspot, useItemOn } from './interact';
 import { confirmGlyphs, see } from './journal';
+import { WalkPath } from './path';
 import { glyphsOf } from './phrases';
 import { START, createState } from './state';
 import type { Chapter, ComposeRequest, Cup, FlagValue, GameState, Glyph, PuzzleId, SceneDef, ScriptContext } from './types';
@@ -134,7 +135,7 @@ export class HeadlessContext implements ScriptContext {
     const x = scene.entries[entry];
     if (x === undefined) throw new Error(`scene ${sceneId} has no entry ${entry}`);
     this.state.scene = sceneId;
-    this.state.px = x;
+    this.state.px = new WalkPath(scene.path).atX(x);
     await enterScene(this, scene);
   }
 }

@@ -113,7 +113,6 @@ const village: SceneDef = {
         }
         if (item !== 'water') return refuse(c, 'woman', item, '水');
         c.take('water');
-        c.give('bucket');
         c.set('woman_done');
         c.sfx('pour');
         await c.say('woman', '好！谢谢！谢谢！');
@@ -189,10 +188,10 @@ const village: SceneDef = {
       id: 'kid',
       name: 'Ребёнок',
       figure: { robe: '#c9853a', trim: '#7a4a1c', hat: 'twinbuns', scale: 0.62 },
-      x: 1060,
-      y: 818,
-      facing: 'left',
-      standAt: 1150,
+      x: 790,
+      y: 822,
+      facing: 'right',
+      standAt: 700,
       onTalk: (c) => cycle(c, 'kid1_n', 'kid', ['你好！', '山！山！', '你好！你好！']),
     },
   ],
@@ -289,6 +288,7 @@ const arch: SceneDef = {
     [700, 822],
     [1010, 818],
   ],
+  depth: [470, 0.3],
   entries: { left: 90 },
   actors: [
     {

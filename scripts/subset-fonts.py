@@ -2,7 +2,7 @@
 """Build tiny subset fonts for the game.
 
 Scans src/ for every CJK character actually used in the game and writes
-woff2 subsets of two OFL fonts into public/fonts/:
+woff2 subsets of two OFL fonts into src/assets/fonts/:
 
   * LXGW WenKai  (kaishu, textbook stroke forms) — hanzi + Latin + pinyin + Cyrillic
   * Ma Shan Zheng (brush)                        — hanzi used on signs and titles
@@ -22,7 +22,7 @@ from fontTools import subset
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CACHE = os.path.join(ROOT, ".font-cache")
-OUT = os.path.join(ROOT, "public", "fonts")
+OUT = os.path.join(ROOT, "src", "assets", "fonts")
 
 SOURCES = {
     "wenkai": "https://raw.githubusercontent.com/lxgw/LxgwWenKai/main/fonts/TTF/LXGWWenKai-Regular.ttf",

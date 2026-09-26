@@ -201,11 +201,12 @@ const teahouse: Art = (_s, look) =>
       lowTable(p, 855, 856, 110),
       g({}, cup(835, 806, false, '#efe7d4'), cup(870, 808, false, '#efe7d4')),
       lowTable(p, 1135, 856, 100),
-      lowTable(p, 1370, 856, 100),
+      lowTable(p, 1335, 856, 100),
+      g({}, cup(1320, 806, false, '#efe7d4'), cup(1352, 808, false, '#efe7d4')),
       rect(0, 0, W, 150, { fill: beam }),
       rect(0, 140, W, 24, { fill: p.woodDark }),
       path(Array.from({ length: 30 }, (_, i) => `M${i * 56} 150 v-150`).join(' '), { stroke: darken(beam, 0.2), 'stroke-width': 3 }),
-      g({}, ...[18, 560, 1100, 1582].map((x) => rect(x - 14, 160, 28, 690, { fill: p.red }))),
+      g({}, ...[18, 560, 975, 1582].map((x) => rect(x - 14, 160, 28, 690, { fill: p.red }))),
       g({}, ...[300, 830, 1350].map((x) => hangingLantern(p, x, 165, 1, true))),
     ].join('');
   });

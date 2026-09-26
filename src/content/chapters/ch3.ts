@@ -22,7 +22,7 @@ async function ringBells(c: ScriptContext): Promise<void> {
   await c.event('moonrise');
   await c.say('priest', '好！看，月上山。');
   await c.say('nun', '好，上山。');
-  await c.move('nun', 1330, 780);
+  await c.move('nun', 1480, 830);
 }
 
 const midgate: SceneDef = {
@@ -41,6 +41,7 @@ const midgate: SceneDef = {
     [700, 846],
     [1190, 842],
   ],
+  depth: [520, 0.35],
   entries: { bottom: 100, top: 1150 },
   marks: { board: [1010, 470] },
   actors: [
@@ -63,8 +64,8 @@ const midgate: SceneDef = {
       id: 'nun',
       name: 'Монахиня',
       figure: { robe: '#6d6d7d', trim: '#2d2d38', hat: 'hood' },
-      x: (s) => (solved(s) ? 1330 : 1225),
-      y: (s) => (solved(s) ? 780 : 842),
+      x: (s) => (solved(s) ? 1480 : 1225),
+      y: (s) => (solved(s) ? 830 : 842),
       facing: 'left',
       standAt: 1110,
       onTalk: async (c) => c.say('nun', c.flag('bells_solved') ? '好，上山。' : '下雨，不上山。'),
@@ -118,7 +119,7 @@ const midgate: SceneDef = {
       id: 'stairs',
       to: '3b',
       entry: 'bottom',
-      rect: [1150, 360, 320, 480],
+      rect: [1150, 360, 270, 480],
       dir: 'up',
       standAt: 1180,
       label: 'Вверх, к Восемнадцати поворотам',

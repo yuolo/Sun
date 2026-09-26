@@ -1,6 +1,8 @@
 import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { figureHeight } from '../src/art/figures';
 import { hasIllustration, tabletPicture } from '../src/art/illustrations';
 import { GRAMMAR } from '../src/content/grammar';
 import { HINTS } from '../src/content/hints';
@@ -10,9 +12,10 @@ import { PAGES } from '../src/content/pages';
 import { RECIPES } from '../src/content/recipes';
 import { CHAPTERS, SCENES, hasScene } from '../src/content/world';
 import { isHan } from '../src/core/phrases';
+import { num, visibleActors, visibleExits } from '../src/core/interact';
 import { createState } from '../src/core/state';
 
-const CHAPTER_DIR = join(__dirname, '../src/content/chapters');
+const CHAPTER_DIR = join(dirname(fileURLToPath(import.meta.url)), '../src/content/chapters');
 
 describe('lexicon', () => {
   it('has 51 unique single characters with pinyin and meaning', () => {
@@ -100,6 +103,27 @@ describe('scenes', () => {
       const look = scene.look(s);
       expect(scene.art(s, look)).toMatch(/^<svg/);
       if (scene.front) expect(scene.front(s, look)).toMatch(/^<svg/);
+    }
+  });
+
+  it('actors never cover the centre of an exit', () => {
+    const s = createState(0);
+    for (const scene of SCENES) {
+      for (const e of visibleExits(scene, s)) {
+        const cx = e.rect[0] + e.rect[2] / 2;
+        const cy = e.rect[1] + e.rect[3] / 2;
+        for (const a of visibleActors(scene, s)) {
+          if (!a.onTalk && !a.onItem) continue;
+          const spec = typeof a.figure === 'function' ? a.figure(s) : a.figure;
+          const x = num(a.x, s);
+          const y = num(a.y, s);
+          const near = Math.max(...scene.path.map((p) => p[1]));
+          const depth = scene.depth ? 1 - Math.max(0, Math.min(1, (near - y) / (near - scene.depth[0]))) * (1 - scene.depth[1]) : 1;
+          const hw = 46 * (spec.scale ?? 1) * depth;
+          const covered = cx >= x - hw && cx <= x + hw && cy >= y - figureHeight(spec) * depth && cy <= y;
+          expect(covered, `${scene.id}: ${a.id} covers exit ${e.id}`).toBe(false);
+        }
+      }
     }
   });
 
