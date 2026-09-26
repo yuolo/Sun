@@ -62,10 +62,11 @@ class Mover:
             self.fut.set()
         self.tx, self.ty = x, y
         self.speed = speed or self.speed
-        self.fut = Future()
+        fut: Future = Future()
+        self.fut = fut
         if abs(x - self.x) < 1 and (y is None or abs(y - self.y) < 1):
             self._arrive()
-        return self.fut
+        return fut
 
     def _arrive(self) -> None:
         self.tx = self.ty = None
