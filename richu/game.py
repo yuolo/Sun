@@ -9,8 +9,10 @@ from .engine import app
 def main(argv: list[str] | None = None) -> None:
     args = sys.argv[1:] if argv is None else argv
     app.init(headless='--headless' in args)
-    from .ui.title import TitleScreen
+    from .ui.menus import TitleScreen
+    from .ui.session import SESSION
 
+    SESSION.boot()
     app.APP.push(TitleScreen())
     app.run()
 

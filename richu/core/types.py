@@ -123,17 +123,24 @@ class TextDef:
 
 @dataclass
 class FigureSpec:
+    """A procedural pixel person (art/figures.py)."""
+
     coat: int
     trim: int | None = None
-    hat: str = 'none'
+    #: robe (to the ankles) · jacket (trousers show) · dress · uniform
+    style: str = 'jacket'
+    #: short · long · ponytail · bun · twinbuns · topknot · bald · straw · wide · cap · police · scholar · hood
+    hat: str = 'short'
     hat_color: int | None = None
     hair: int | None = None
     skin: int | None = None
-    prop: str = ''
-    pose: str = 'stand'
-    beard: bool = False
-    kind: str = 'adult'  # adult · child · old
     legs: int | None = None
+    #: pole · oar · staff · lantern · broom · fan · book · umbrella · suitcase · bag · rod · basket · cup · brush
+    prop: str = ''
+    pose: str = 'stand'  # stand · sit
+    beard: bool = False
+    glasses: bool = False
+    kind: str = 'adult'  # adult · child · old
 
 
 @dataclass

@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Screenshots of game screens in headless mode.
+"""Screenshots of scenes and screens in headless mode, for reviewing the art and UI.
 
-    python scripts/shots.py [out_dir]          # title screen and more as they appear
+    python scripts/shots.py [out_dir]
+
+Plays the story headlessly (as the tests do), then shows each visited scene
+and the main windows in the real UI and saves PNGs (×3).
 """
 from __future__ import annotations
 
+import copy
 import os
 import sys
 
@@ -12,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from richu import platform  # noqa: E402
 from richu.engine import app  # noqa: E402
+from richu.engine.app import APP  # noqa: E402
 from richu.engine.driver import Driver  # noqa: E402
 
 
@@ -20,14 +25,101 @@ def main() -> None:
     os.makedirs(out, exist_ok=True)
     platform.use_memory_storage()
     app.init(headless=True)
-    d = Driver()
-    from richu.ui.title import TitleScreen
+    from richu.content.world import load
+    from richu.core.headless import HeadlessGame
+    from richu.devtools import playthrough as pt
+    from richu.ui import bubbles
+    from richu.ui.card import GlyphCard
+    from richu.ui.composer import AnswerPad, BrushPad
+    from richu.ui.journal import Journal, PageView
+    from richu.ui.menus import ChapterCard, TitleScreen
+    from richu.ui.reader import Reader
+    from richu.ui.scene_view import SceneView
+    from richu.ui.session import SESSION
 
-    app.APP.push(TitleScreen())
-    d.step(2)
-    d.move(160, 120)
-    d.shot(os.path.join(out, 'title'))
-    print('saved to', out)
+    load()
+    SESSION.boot()
+    d = Driver()
+    n = 0
+
+    def shot(name: str, frames: int = 2) -> None:
+        nonlocal n
+        d.step(frames)
+        n += 1
+        d.shot(os.path.join(out, f'{n:02d}-{name}'))
+
+    APP.replace_all(TitleScreen())
+    d.move(160, 150)
+    shot('title', 40)
+    APP.replace_all(ChapterCard(1))
+    shot('chapter1', 30)
+
+    # play the story, remembering the state at every scene change
+    g = HeadlessGame()
+    states: list[tuple[str, object]] = []
+    orig_goto = g.c.goto
+
+    async def goto(scene_id: str, entry: str) -> None:
+        await orig_goto(scene_id, entry)
+        states.append((scene_id, copy.deepcopy(g.state)))
+
+    g.c.goto = goto  # type: ignore[method-assign]
+    pt.play_prologue(g)
+    pt.play_chapter1(g)
+    final = copy.deepcopy(g.state)
+
+    for scene_id, st in states:
+        SESSION.state = copy.deepcopy(st)  # type: ignore[assignment]
+        view = SceneView()
+        APP.replace_all(view)
+        view.load(scene_id)
+        d.move(300, 20)
+        shot(f'scene-{scene_id}')
+        # a speech bubble over the first actor, with notes
+        if view.scene and view.scene.actors:
+            a = view.scene.actors[0]
+            view.bubbles = [bubbles.Bubble(SESSION.state, '你好！你要去哪儿？', view.rt._anchor(a.id))]
+            shot(f'bubble-{scene_id}')
+            view.bubbles = []
+
+    SESSION.state = final  # type: ignore[assignment]
+    SESSION.state.guesses.update({'你': 'ты', '好': 'хорошо', '我': 'я', '是': 'быть', '人': 'человек', '火': 'огонь', '车': 'повозка'})
+    view = SceneView()
+    APP.replace_all(view)
+    view.load('1c')
+    view.narration = bubbles.Narration('За окном широкая мутно-жёлтая река. Поезд идёт по длинному мосту.')
+    shot('narration')
+    view.narration = None
+    for tab in ('Знаки', 'Слова', 'Страницы', 'Тексты', 'Фразы', 'Грамматика', 'Повторение'):
+        APP.replace_all(view)
+        APP.push(Journal(view, tab))
+        shot(f'journal-{tab}')
+    from richu.content import pages as PG
+
+    for pid in ('greet', 'cafe', 'this'):
+        APP.replace_all(view)
+        st = SESSION.state
+        st.pages.pop(pid, None)
+        APP.push(PageView(PG.page(pid)))
+        shot(f'page-{pid}')
+    APP.replace_all(view)
+    APP.push(GlyphCard('火', view))
+    shot('card-fire')
+    SESSION.state.confirmed.pop('车', None)
+    APP.replace_all(view)
+    APP.push(GlyphCard('车', view))
+    shot('card-cart-unconfirmed')
+    APP.replace_all(view)
+    APP.push(Reader('diary_1'))
+    shot('reader-diary1')
+    APP.replace_all(view)
+    APP.push(AnswerPad('你好'))
+    shot('answer-pad')
+    SESSION.state.flags['brush_awake'] = True
+    APP.replace_all(view)
+    APP.push(BrushPad())
+    shot('brush-pad')
+    print(f'{n} screenshots in {out}')
 
 
 if __name__ == '__main__':

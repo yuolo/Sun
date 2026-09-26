@@ -106,7 +106,10 @@ class HeadlessContext:
         self.events.append(name)
 
     async def read(self, text_id: str) -> None:
+        from ..content.texts import text
+
         self.unlock(text_id)
+        journal.see(self.state, text(text_id).zh)
         self.events.append(f'read:{text_id}')
 
     async def chapter(self, n: int) -> None:
@@ -187,7 +190,7 @@ class HeadlessGame:
 
         p = page(page_id)
         if journal.page_status(self.state, p) != 'open':
-            raise AssertionError(f'page {page_id} is not open: missing {[g for g in p.glyphs if g not in self.state.seen]}')
+            raise AssertionError(f'page {page_id} is not open: missing {[g for g in journal.page_chars(p) if g not in self.state.seen]}')
         for i, g in enumerate(p.glyphs):
             journal.place(self.state, p, i, g)
         ok, fresh = journal.submit_page(self.state, p)

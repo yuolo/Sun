@@ -3,7 +3,8 @@ from __future__ import annotations
 
 
 def is_han(ch: str) -> bool:
-    return '㐀' <= ch <= '鿿' or '豈' <= ch <= '﫿'
+    o = ord(ch)
+    return 0x3400 <= o <= 0x9FFF or 0xF900 <= o <= 0xFAFF
 
 
 def glyphs_of(text: str) -> list[str]:

@@ -47,7 +47,10 @@ PACKAGES = {
     'wenkai': 'lxgw-wenkai-webfont',
 }
 
-CJK = re.compile(r'[㐀-鿿豈-﫿]')
+CJK = re.compile(r'[\u2e80-\u2fdf\u31c0-\u31ef\u3400-\u9fff\uf900-\ufaff]')
+
+# reference data that is never shown whole
+SKIP = {'hanzi_meta.py', 'hsk.py'}
 
 EXTRA = (
     ''.join(chr(c) for c in range(0x20, 0x7F))
@@ -78,6 +81,8 @@ def charset() -> tuple[str, str]:
     if tsv.exists():
         text += tsv.read_text(encoding='utf-8')
     for path in (ROOT / 'richu').rglob('*.py'):
+        if path.name in SKIP:
+            continue
         text += path.read_text(encoding='utf-8')
     chars = sorted(set(text) - set('\n\r\t'))
     hanzi = ''.join(c for c in chars if CJK.match(c))

@@ -92,6 +92,20 @@ TIMES: dict[str, list[int]] = {
     }),
 }
 
+# People and props change more gently than the landscape.
+FIGURE_TIMES: dict[str, list[int]] = {
+    'day': _remap({}),
+    'golden': _remap({WHITE: LAMP}),
+    'sunset': _remap({WHITE: PEACH, LIGHT_BLUE: 14}),
+    'dusk': _remap({WHITE: MIST, PEACH: 14, PAPER: MIST, YELLOW: OCHRE}),
+    'night': _remap({
+        WHITE: MIST, PAPER: GREY, PEACH: STONE, 15: STONE, YELLOW: OCHRE, VERMILION: PLUM, JADE: PINE, MOSS: PINE,
+        OCHRE: PLUM, LIGHT_BLUE: PERIWINKLE, GREY: STONE, MINT: TEAL, ORANGE: PLUM, 14: PLUM,
+    }),
+    'predawn': _remap({WHITE: MIST, PAPER: MIST, PEACH: 14, YELLOW: OCHRE, 15: 14}),
+    'dawn': _remap({WHITE: LAMP}),
+}
+
 # Night colours lit by a lantern: dark tones warm up near the light.
 LAMPLIT = _remap({
     NIGHT: WOOD, NAVY: PLUM, DARK_BLUE: OCHRE, STONE: OCHRE, 12: PEACH, GREY: PEACH,
@@ -110,6 +124,17 @@ def set_time(time: str) -> None:
     import pyxel
 
     for i, c in enumerate(TIMES.get(time, TIMES['day'])):
+        if c != i:
+            pyxel.pal(i, c)
+
+
+def set_figure_time(time: str, lit: bool = False) -> None:
+    """Palette remap for people and props; a lantern keeps them in their own colours."""
+    import pyxel
+
+    if lit and time in ('night', 'dusk', 'predawn'):
+        return
+    for i, c in enumerate(FIGURE_TIMES.get(time, FIGURE_TIMES['day'])):
         if c != i:
             pyxel.pal(i, c)
 

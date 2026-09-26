@@ -69,15 +69,25 @@ def contexts(s: GameState, g: str, limit: int = 6) -> list[str]:
 # ---------------------------------------------------------------- pages
 
 
+def page_chars(page: PageDef) -> list[str]:
+    """Every glyph a page confirms (a slot may hold a whole word: 飞机, 行李箱)."""
+    out: list[str] = []
+    for w in page.glyphs:
+        for ch in w:
+            if ch not in out:
+                out.append(ch)
+    return out
+
+
 def page_status(s: GameState, page: PageDef) -> str:
     """locked (not every glyph met yet) · open · done."""
     if s.pages.get(page.id):
         return 'done'
-    return 'open' if all(g in s.seen for g in page.glyphs) else 'locked'
+    return 'open' if all(ch in s.seen for ch in page_chars(page)) else 'locked'
 
 
 def missing_count(s: GameState, page: PageDef) -> int:
-    return sum(1 for g in page.glyphs if g not in s.seen)
+    return sum(1 for ch in page_chars(page) if ch not in s.seen)
 
 
 def open_pages(s: GameState) -> list[PageDef]:
@@ -122,7 +132,7 @@ def submit_page(s: GameState, page: PageDef) -> tuple[bool, list[str]]:
         return False, []
     s.pages[page.id] = True
     s.placements.pop(page.id, None)
-    return True, confirm(s, list(page.glyphs))
+    return True, confirm(s, page_chars(page))
 
 
 def _hash(text: str) -> int:

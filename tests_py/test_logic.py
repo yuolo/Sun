@@ -123,3 +123,26 @@ def test_state_roundtrip():
 
 def test_tones():
     assert [tone_of(p) for p in ('mā', 'má', 'mǎ', 'mà', 'ma')] == [1, 2, 3, 4, 0]
+
+
+def test_fonts_cover_every_character_in_the_game():
+    """The pixel font and the brush glyphs include every hanzi the game can show."""
+    import os
+    import re
+
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    used: set[str] = set()
+    for dirpath, _, files in os.walk(os.path.join(root, 'richu')):
+        for f in files:
+            if f.endswith('.py') and f not in ('hanzi_meta.py', 'hsk.py'):
+                used |= set(re.findall(r'[㐀-鿿]', open(os.path.join(dirpath, f), encoding='utf-8').read()))
+    bdf = open(os.path.join(root, 'richu', 'assets', 'fonts', 'px12.bdf'), encoding='ascii').read()
+    in_font = {chr(int(m)) for m in re.findall(r'^ENCODING (\d+)$', bdf, re.M)}
+    missing = sorted(used - in_font)
+    assert not missing, f'run scripts/build_fonts.py: missing {"".join(missing)}'
+    import json
+
+    brush = json.load(open(os.path.join(root, 'richu', 'assets', 'fonts', 'brush.json'), encoding='utf-8'))['chars']
+    from richu.content import lexicon
+
+    assert not sorted(set(lexicon.LEXICON) - set(brush)), 'run scripts/build_fonts.py: brush glyphs are out of date'

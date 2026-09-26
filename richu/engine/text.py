@@ -48,7 +48,8 @@ def center(cx: float, y: float, s: str, col: int, small: bool = False, shadow: i
 
 
 def is_hanzi(ch: str) -> bool:
-    return '㐀' <= ch <= '鿿' or '豈' <= ch <= '﫿'
+    o = ord(ch)
+    return 0x3400 <= o <= 0x9FFF or 0xF900 <= o <= 0xFAFF
 
 
 def wrap(s: str, maxw: int, small: bool = False) -> list[str]:
